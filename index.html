@@ -1450,6 +1450,7 @@ function gsSalvarUrl(){
     toast('URL inválida — deve ser do script.google.com','e'); return;
   }
   localStorage.setItem(GS_URL_KEY, u);
+  localStorage.removeItem(GS_RESOLVED_KEY); // limpa cache da URL resolvida
   toast('✅ URL salva!','s');
   gsStatusShow('success','URL salva. Clique em "Testar Conexão" para verificar.');
 }
@@ -1463,64 +1464,95 @@ function gsStatusShow(tipo, msg){
   el.textContent = msg;
 }
 
-// ── GET via JSONP (resolve CORS do Apps Script em GitHub Pages) ──
-function gsGet(action){
-  return new Promise((resolve, reject)=>{
-    const url = gsGetUrl();
-    if(!url) return reject(new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.'));
-    const cb = 'gsCallback_' + Date.now();
-    const script = document.createElement('script');
-    const timeout = setTimeout(()=>{
-      cleanup();
-      reject(new Error('Timeout — verifique a URL e a conexão'));
-    }, 15000);
-    function cleanup(){
-      clearTimeout(timeout);
-      delete window[cb];
-      if(script.parentNode) script.parentNode.removeChild(script);
+// ══════════════════════════════════════════════════════════════════
+//  COMUNICAÇÃO COM APPS SCRIPT
+//  O Apps Script redireciona a URL original para uma URL final.
+//  fetch() perde o CORS header no redirect.
+//  Solução: resolvemos a URL final uma vez e cacheamos no localStorage.
+//  Todas as chamadas usam a URL final diretamente — sem redirect.
+// ══════════════════════════════════════════════════════════════════
+
+const GS_RESOLVED_KEY = 'gsheets_resolved_url_v4';
+
+// Resolve a URL final do Apps Script (segue redirect manualmente via iframe+fetch)
+async function gsResolveUrl(baseUrl) {
+  // Tenta buscar direto — se retornar 200 já é a URL final
+  try {
+    const r = await fetch(baseUrl + '?action=ping', {method:'GET', redirect:'follow'});
+    if (r.ok) {
+      // pega a URL final após redirect
+      const finalUrl = r.url.split('?')[0];
+      localStorage.setItem(GS_RESOLVED_KEY, finalUrl);
+      return finalUrl;
     }
-    window[cb] = function(json){
-      cleanup();
-      if(json.ok) resolve(json.data);
-      else reject(new Error(json.error||'Erro no servidor'));
+  } catch(_){}
+  return baseUrl;
+}
+
+async function gsGetFinalUrl() {
+  const base = gsGetUrl();
+  if (!base) throw new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.');
+  // Usa cached se disponível
+  const cached = localStorage.getItem(GS_RESOLVED_KEY);
+  if (cached) return cached;
+  return await gsResolveUrl(base);
+}
+
+async function gsCall(action, payload) {
+  const baseUrl = gsGetUrl();
+  if (!baseUrl) throw new Error('URL do Apps Script não configurada.');
+
+  // Codifica payload em base64 UTF-8 para passar via GET
+  let dataParam = '';
+  if (payload && Object.keys(payload).length > 0) {
+    dataParam = '&data=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
+  }
+
+  // Tenta com a URL base primeiro (redirect:follow)
+  // Se falhar por CORS, tenta a URL resolvida em cache
+  const urls = [baseUrl];
+  const cached = localStorage.getItem(GS_RESOLVED_KEY);
+  if (cached && cached !== baseUrl) urls.push(cached);
+
+  let lastErr;
+  for (const url of urls) {
+    try {
+      const fullUrl = `${url}?action=${action}${dataParam}`;
+      const resp = await fetch(fullUrl, {redirect:'follow'});
+      // Salva URL final resolvida para próximas chamadas
+      const resolvedBase = resp.url.split('?')[0];
+      if (resolvedBase !== baseUrl) {
+        localStorage.setItem(GS_RESOLVED_KEY, resolvedBase);
+      }
+      const json = await resp.json();
+      if (!json.ok) throw new Error(json.error || 'Erro no servidor');
+      return json.data;
+    } catch(e) {
+      lastErr = e;
+    }
+  }
+
+  // Se fetch falhou completamente, tenta via XHR (às vezes resolve diferente)
+  return new Promise((resolve, reject) => {
+    const fullUrl = `${baseUrl}?action=${action}${dataParam}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', fullUrl, true);
+    xhr.onload = () => {
+      try {
+        const json = JSON.parse(xhr.responseText);
+        if (json.ok) resolve(json.data);
+        else reject(new Error(json.error || 'Erro no servidor'));
+      } catch(e) { reject(new Error('Resposta inválida do servidor')); }
     };
-    script.onerror = ()=>{ cleanup(); reject(new Error('Failed to fetch — verifique a URL do Apps Script')); };
-    script.src = `${url}?action=${action}&callback=${cb}`;
-    document.head.appendChild(script);
+    xhr.onerror = () => reject(new Error('Sem resposta do servidor. Verifique: 1) URL correta 2) Deploy publicado como "Anyone" 3) Autorização concedida'));
+    xhr.ontimeout = () => reject(new Error('Timeout — servidor não respondeu'));
+    xhr.timeout = 30000;
+    xhr.send();
   });
 }
 
-// ── POST via fetch com mode no-cors NÃO funciona para ler resposta.
-//    Solução: enviar como GET com payload codificado em base64 para
-//    operações de escrita (Apps Script aceita via doGet com param data).
-//    O Apps Script foi atualizado para aceitar action+data via GET/JSONP.
-async function gsPost(action, payload){
-  const url = gsGetUrl();
-  if(!url) throw new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.');
-  // Codifica payload como base64 para passar via GET/JSONP
-  const data = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  return new Promise((resolve, reject)=>{
-    const cb = 'gsCallback_' + Date.now();
-    const script = document.createElement('script');
-    const timeout = setTimeout(()=>{
-      cleanup();
-      reject(new Error('Timeout — verifique a URL e a conexão'));
-    }, 30000);
-    function cleanup(){
-      clearTimeout(timeout);
-      delete window[cb];
-      if(script.parentNode) script.parentNode.removeChild(script);
-    }
-    window[cb] = function(json){
-      cleanup();
-      if(json.ok) resolve(json.data);
-      else reject(new Error(json.error||'Erro no servidor'));
-    };
-    script.onerror = ()=>{ cleanup(); reject(new Error('Failed to fetch — verifique a URL do Apps Script')); };
-    script.src = `${url}?action=${action}&data=${encodeURIComponent(data)}&callback=${cb}`;
-    document.head.appendChild(script);
-  });
-}
+async function gsGet(action) { return gsCall(action, {}); }
+async function gsPost(action, payload) { return gsCall(action, payload); }
 
 // ── testar conexão ──────────────────────────────────────────
 async function gsPing(){
