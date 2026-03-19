@@ -210,7 +210,7 @@ label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;displa
 <aside class="sb">
   <div class="sb-h">
     <div class="sb-ico">🕐</div>
-    <div><div class="sb-tit">CONTROLE DE PONTO</div><div class="sb-sub">v1.0 · IndexedDB</div></div>
+    <div><div class="sb-tit">CONTROLE DE PONTO</div><div class="sb-sub">v4.0 · IndexedDB + GSheets</div></div>
   </div>
   <nav class="sb-nav">
     <div class="ns">Painel</div>
@@ -229,8 +229,9 @@ label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;displa
     <div class="ni" data-p="espelho">🪞 Espelho por Turno</div>
     <div class="ns">Sistema</div>
     <div class="ni" data-p="log">⚠️ Log de Erros</div>
+    <div class="ni" data-p="gsheets">☁️ Google Planilhas</div>
   </nav>
-  <div class="sb-ft">💾 IndexedDB · Wanderley.M.S.Bazan · 2026</div>
+  <div class="sb-ft">💾 IndexedDB + ☁️ GSheets · Wanderley.M.S.Bazan · 2026</div>
 </aside>
 
 <!-- ═══ MAIN ═══ -->
@@ -238,7 +239,7 @@ label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;displa
   <header class="tb">
     <div><div class="tb-t" id="ttit">Dashboard</div><div class="tb-s" id="tsub">Visão geral</div></div>
     <div class="tb-r">
-      <span class="db-badge">💾 IndexedDB</span>
+      <span class="db-badge">💾 IndexedDB + ☁️ GSheets</span>
       <span class="pill pb"><span class="dot"></span><span id="pc">0</span> cadastrados</span>
       <span class="pill pg2"><span class="dot"></span><span id="pr">0</span> registros</span>
       <span class="pill pr2"><span class="dot"></span><span id="pe">0</span> erros</span>
@@ -271,7 +272,7 @@ label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;displa
   <div class="g2" style="margin-bottom:0">
     <div>
       <div class="is"><h3>1. Como funciona</h3><div class="ilist">
-        <div class="ii"><span class="em">🌐</span><span>Este sistema roda <b>100% no navegador</b> </span></div>
+        <div class="ii"><span class="em">🌐</span><span>Este sistema roda <b>100% no navegador</b> — sem servidor, sem Python, sem instalar nada. Basta abrir o arquivo HTML.</span></div>
         <div class="ii"><span class="em">💾</span><span>Os dados ficam salvos no <b>IndexedDB</b> — banco de dados nativo do navegador. Os dados <b>persistem entre sessões</b> automaticamente.</span></div>
         <div class="ii"><span class="em">⚠️</span><span>Limpar o cache/dados do navegador apaga o banco. Use o botão <b>"Exportar Cadastro"</b> para fazer backup periódico.</span></div>
       </div></div>
@@ -313,7 +314,11 @@ label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;displa
         <div class="ii"><span class="em">⬇️</span><span>Botão <b>"Exportar XLSX"</b> no cadastro faz backup das 4 abas</span></div>
         <div class="ii"><span class="em">🔄</span><span>Botão <b>"Resetar DB"</b> apaga tudo e reimporta o cadastro original de 126 funcionários</span></div>
       </div></div>
-    
+      <div class="is"><h3>6. GitHub / Distribuição</h3><div class="ilist">
+        <div class="ii"><span class="em">📁</span><span>Este arquivo é <b>autocontido</b> — basta distribuir o <code>.html</code></span></div>
+        <div class="ii"><span class="em">🌐</span><span>Pode hospedar no <b>GitHub Pages</b>: basta colocar o HTML em um repositório e ativar Pages</span></div>
+        <div class="ii"><span class="em">☁️</span><span>Também funciona em <b>Netlify Drop</b> — arraste o arquivo no site e pronto</span></div>
+      </div></div>
     </div>
   </div>
 </div>
@@ -416,7 +421,7 @@ label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;displa
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
       <div><div style="font-size:14px;font-weight:700;margin-bottom:3px">Gerar Relatório Completo</div>
-      <div style="font-size:11.5px;color:var(--tx3)">6 abas · XLSX</div></div>
+      <div style="font-size:11.5px;color:var(--tx3)">6 abas · XLSX formatado igual ao VBA original</div></div>
       <button class="btn bac" id="btn-rel" onclick="gerarRel()">📥 Gerar e Baixar XLSX</button>
     </div>
   </div>
@@ -457,6 +462,76 @@ label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;displa
       <div><div style="font-size:14px;font-weight:700;margin-bottom:3px">Gerar Espelho de Ponto</div>
       <div style="font-size:11.5px;color:var(--tx3)">Uma aba por turno · Freeze linha 5 · Pronto para impressão</div></div>
       <button class="btn bpu" id="btn-esp" onclick="gerarEsp()">🪞 Gerar e Baixar XLSX</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GOOGLE SHEETS ══ -->
+<div class="page" id="pg-gsheets">
+  <div class="sh"><div><div class="sh-t">☁️ Google Planilhas</div><div class="sh-s">Banco de dados online — sincronize cadastro e registros</div></div></div>
+
+  <!-- Config URL -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="ctit"><span class="cbar" style="background:var(--gr)"></span>CONFIGURAÇÃO</div>
+    <div class="abox info" style="margin-bottom:12px">
+      ℹ️ Cole aqui a URL do seu <b>Apps Script Web App</b> publicado.<br>
+      <span style="font-size:10.5px;color:var(--tx3)">Extensions → Apps Script → Deploy → New Deployment → Web App → Execute as: Me → Who has access: Anyone</span>
+    </div>
+    <div class="fg">
+      <label>URL do Apps Script Web App</label>
+      <input id="gs-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="width:100%;font-family:monospace;font-size:11px">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn bgr bsm" onclick="gsSalvarUrl()">💾 Salvar URL</button>
+      <button class="btn bgh bsm" onclick="gsPing()">🔌 Testar Conexão</button>
+    </div>
+    <div id="gs-status" style="margin-top:10px;font-size:12px;display:none"></div>
+  </div>
+
+  <!-- Sync Cadastro -->
+  <div class="g2">
+    <div class="card">
+      <div class="ctit"><span class="cbar" style="background:var(--ac)"></span>CADASTRO DE FUNCIONÁRIOS</div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:12px;line-height:1.6">
+        <b style="color:var(--tx)">Enviar →</b> sobe o cadastro local para a planilha<br>
+        <b style="color:var(--tx)">← Receber</b> baixa da planilha e atualiza o IndexedDB local<br>
+        <span style="font-size:10.5px">As operações individuais (add/edit/del) já sincronizam automaticamente quando a URL está configurada.</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn bac bsm" onclick="gsSyncCadastroEnviar()">☁️ Enviar Tudo</button>
+        <button class="btn bcy bsm" onclick="gsSyncCadastroReceber()">⬇️ Receber da Nuvem</button>
+      </div>
+      <div id="gs-cad-info" style="margin-top:8px;font-size:11px;color:var(--tx3)"></div>
+    </div>
+    <div class="card">
+      <div class="ctit"><span class="cbar" style="background:var(--or)"></span>REGISTROS DE PONTO (BATIDAS)</div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:12px;line-height:1.6">
+        <b style="color:var(--tx)">Enviar →</b> sobe registros locais (novos apenas, sem duplicar)<br>
+        <b style="color:var(--tx)">← Receber</b> baixa registros da planilha para o IndexedDB<br>
+        <span style="font-size:10.5px">Útil para compartilhar registros entre computadores diferentes.</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn bor bsm" onclick="gsSyncRegistrosEnviar()">☁️ Enviar Novos</button>
+        <button class="btn bcy bsm" onclick="gsSyncRegistrosReceber()">⬇️ Receber da Nuvem</button>
+      </div>
+      <div id="gs-reg-info" style="margin-top:8px;font-size:11px;color:var(--tx3)"></div>
+    </div>
+  </div>
+
+  <!-- Instruções -->
+  <div class="card" style="margin-top:4px">
+    <div class="ctit"><span class="cbar" style="background:var(--pu)"></span>PASSO A PASSO — CONFIGURAR O APPS SCRIPT</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px;line-height:1.7">
+      <div>
+        <div class="abox info" style="margin-bottom:8px">📋 <b>1. Criar a Planilha Google</b><br>Acesse sheets.google.com → crie uma nova planilha em branco</div>
+        <div class="abox info" style="margin-bottom:8px">⚙️ <b>2. Abrir o Apps Script</b><br>No menu: <b>Extensões → Apps Script</b></div>
+        <div class="abox info" style="margin-bottom:8px">📝 <b>3. Colar o código</b><br>Apague o código padrão e cole o conteúdo do arquivo <code style="font-size:10px">CodigoPasteNoAppsScript.gs</code></div>
+      </div>
+      <div>
+        <div class="abox suc" style="margin-bottom:8px">💾 <b>4. Salvar</b><br>Ctrl+S ou botão 💾. Nome do projeto: <b>SistemaPonto</b></div>
+        <div class="abox suc" style="margin-bottom:8px">🚀 <b>5. Deploy</b><br><b>Deploy → New Deployment → Web App</b><br>Execute as: <b>Me</b> · Who has access: <b>Anyone</b><br>Clique <b>Deploy</b> e copie a URL gerada</div>
+        <div class="abox warn">⚠️ <b>6. Autorizar</b><br>Na primeira vez o Google pede permissão — clique em <b>Advanced → Go to SistemaPonto</b> e autorize</div>
+      </div>
     </div>
   </div>
 </div>
@@ -610,6 +685,7 @@ const METAS={
   relatorio: {t:'Relatório por Turno',s:'Gera Relat+Resumo T1/T2/T3 em XLSX'},
   espelho:   {t:'Espelho por Turno',s:'Espelho individual com batidas por dia'},
   log:       {t:'Log de Erros',s:'Erros de importação e validação'},
+  gsheets:   {t:'Google Planilhas',s:'Banco de dados online — sync cadastro e registros'},
 };
 
 document.querySelectorAll('.ni').forEach(n=>n.addEventListener('click',()=>go(n.dataset.p)));
@@ -628,6 +704,7 @@ function go(id){
   if(id==='log') logRender();
   if(id==='relatorio') relStatus();
   if(id.startsWith('cad')) cadLoad(id);
+  if(id==='gsheets') gsPageLoad();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -748,6 +825,18 @@ async function importar(){
     document.getElementById('ir').style.display='block';
     setStep(3);selF=[];renderFL();refreshStatus();
     toast(`✅ ${totImp} registros importados!`,'s');
+    // sync silencioso dos novos registros para a nuvem
+    if(totImp>0){
+      idbGetAll('registros').then(all=>{
+        // pega apenas os importados nesta sessão (últimos totImp por importado_em)
+        const agora=new Date();
+        const recentes=all.filter(r=>{
+          const d=new Date(r.importado_em||0);
+          return (agora-d)<60000; // últimos 60 segundos
+        });
+        if(recentes.length) gsAutoAddRegistros(recentes.map(r=>{const{id,...rest}=r;return rest;}));
+      });
+    }
   },300);
   btn.disabled=false;btn.innerHTML='📥 Importar Selecionados';
 }
@@ -915,8 +1004,17 @@ async function salvarFunc(){
   if(!edit_id&&(pis.length!==11||!/^\d{11}$/.test(pis))){toast('PIS deve ter 11 dígitos numéricos','w');return}
   const obj={pis,matricula:document.getElementById('mf-mat').value.trim(),nome,cargo:document.getElementById('mf-cargo').value.trim(),turno:parseInt(document.getElementById('mf-turno').value),ativo:1,criado_em:new Date().toISOString()};
   try{
-    if(edit_id){obj.id=edit_id;await idbPut('cadastro',obj);}
-    else{await idbAdd('cadastro',obj);}
+    if(edit_id){
+      obj.id=edit_id;
+      await idbPut('cadastro',obj);
+      // sync nuvem: update silencioso
+      gsAutoUpdateFuncionario(obj);
+    }
+    else{
+      await idbAdd('cadastro',obj);
+      // sync nuvem: add silencioso
+      gsAutoAddFuncionario(obj);
+    }
     closeMo('m-func');toast(`✅ Funcionário ${edit_id?'atualizado':'adicionado'}!`,'s');
     refreshStatus();
     ['cadastro','cad1','cad2','cad3'].forEach(p=>{
@@ -937,7 +1035,12 @@ async function abrirDel(id){
   openMo('m-del');
 }
 async function confirmarDel(){
-  closeMo('m-del');await idbDel('cadastro',del_id);
+  closeMo('m-del');
+  // pega PIS antes de deletar para sync nuvem
+  const all=await idbGetAll('cadastro');
+  const func=all.find(x=>x.id===del_id);
+  await idbDel('cadastro',del_id);
+  if(func) gsAutoDeleteFuncionario(func.pis);
   toast('Funcionário removido','i');refreshStatus();
   ['cadastro','cad1','cad2','cad3'].forEach(p=>{
     const el=document.getElementById('pg-'+p);
@@ -1327,6 +1430,246 @@ function toast(msg,type='i',dur=3500){
   el.innerHTML=`<span>${ic[type]}</span><span>${msg}</span>`;
   document.getElementById('toast').appendChild(el);
   setTimeout(()=>{el.style.animation='fOut .3s forwards';setTimeout(()=>el.remove(),300)},dur);
+}
+
+// ══════════════════════════════════════════════════════════
+//  GOOGLE SHEETS — CAMADA DE SYNC HÍBRIDO
+//  IndexedDB = banco local (sempre funciona offline)
+//  GSheets   = banco online (sync manual ou automático)
+// ══════════════════════════════════════════════════════════
+
+const GS_URL_KEY = 'gsheets_url_v3';
+
+// ── helpers ────────────────────────────────────────────────
+function gsGetUrl(){ return localStorage.getItem(GS_URL_KEY)||''; }
+
+function gsSalvarUrl(){
+  const u = document.getElementById('gs-url').value.trim();
+  if(!u){ toast('Cole a URL do Apps Script primeiro','w'); return; }
+  if(!u.startsWith('https://script.google.com')){
+    toast('URL inválida — deve ser do script.google.com','e'); return;
+  }
+  localStorage.setItem(GS_URL_KEY, u);
+  toast('✅ URL salva!','s');
+  gsStatusShow('success','URL salva. Clique em "Testar Conexão" para verificar.');
+}
+
+function gsStatusShow(tipo, msg){
+  const el = document.getElementById('gs-status');
+  if(!el) return;
+  const cores = {success:'var(--gr)', error:'var(--rd)', info:'var(--ac)', warn:'var(--or)'};
+  el.style.display = 'block';
+  el.style.color = cores[tipo]||'var(--tx2)';
+  el.textContent = msg;
+}
+
+// GET request
+async function gsGet(action){
+  const url = gsGetUrl();
+  if(!url) throw new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.');
+  const resp = await fetch(`${url}?action=${action}`, {redirect:'follow'});
+  const json = await resp.json();
+  if(!json.ok) throw new Error(json.error||'Erro desconhecido no servidor');
+  return json.data;
+}
+
+// POST request
+async function gsPost(action, payload){
+  const url = gsGetUrl();
+  if(!url) throw new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.');
+  const resp = await fetch(url, {
+    method:'POST', redirect:'follow',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action, payload})
+  });
+  const json = await resp.json();
+  if(!json.ok) throw new Error(json.error||'Erro desconhecido no servidor');
+  return json.data;
+}
+
+// ── testar conexão ──────────────────────────────────────────
+async function gsPing(){
+  if(!gsGetUrl()){ toast('Configure a URL primeiro','w'); return; }
+  gsStatusShow('info','🔌 Testando conexão...');
+  try{
+    const d = await gsGet('ping');
+    gsStatusShow('success','✅ Conectado! ' + (d.msg||'') + ' — ' + (d.ts||''));
+    toast('✅ Conexão com Google Planilhas OK!','s');
+  }catch(e){
+    gsStatusShow('error','❌ Falha: ' + e.message);
+    toast('Erro de conexão: '+e.message,'e');
+  }
+}
+
+// ── inicializar página ──────────────────────────────────────
+function gsPageLoad(){
+  const urlEl = document.getElementById('gs-url');
+  if(urlEl){ urlEl.value = gsGetUrl(); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  SYNC CADASTRO
+// ══════════════════════════════════════════════════════════
+
+// Enviar cadastro local → planilha (reescreve tudo)
+async function gsSyncCadastroEnviar(){
+  const info = document.getElementById('gs-cad-info');
+  if(!gsGetUrl()){ toast('Configure a URL do Apps Script primeiro','w'); go('gsheets'); return; }
+  try{
+    if(info) info.textContent = '⏳ Enviando cadastro...';
+    const all = await idbGetAll('cadastro');
+    // Normaliza: remove campo 'id' do IndexedDB (não existe na planilha)
+    const rows = all.map(f => {
+      const {id, ...rest} = f;
+      return rest;
+    });
+    const res = await gsPost('syncCadastroFull', {rows});
+    const msg = `✅ ${res.synced} funcionários enviados para a planilha`;
+    if(info) info.textContent = msg;
+    toast(msg,'s');
+  }catch(e){
+    if(info) info.textContent = '❌ ' + e.message;
+    toast('Erro ao enviar cadastro: '+e.message,'e');
+  }
+}
+
+// Receber cadastro da planilha → IndexedDB local (merge por PIS)
+async function gsSyncCadastroReceber(){
+  const info = document.getElementById('gs-cad-info');
+  if(!gsGetUrl()){ toast('Configure a URL do Apps Script primeiro','w'); go('gsheets'); return; }
+  try{
+    if(info) info.textContent = '⏳ Recebendo cadastro da nuvem...';
+    const rows = await gsGet('getCadastro');
+    if(!rows||!rows.length){ if(info) info.textContent = 'A planilha está vazia.'; return; }
+    let novos=0, atualizados=0;
+    const local = await idbGetAll('cadastro');
+    const localMap = {};
+    local.forEach(f => localMap[f.pis] = f);
+    for(const r of rows){
+      const pis = String(r.pis||'').trim();
+      if(!pis) continue;
+      const obj = {
+        pis,
+        matricula: String(r.matricula||''),
+        nome: String(r.nome||''),
+        cargo: String(r.cargo||''),
+        turno: parseInt(r.turno)||0,
+        ativo: parseInt(r.ativo)||1,
+        criado_em: r.criado_em || new Date().toISOString()
+      };
+      if(localMap[pis]){
+        obj.id = localMap[pis].id;
+        await idbPut('cadastro', obj);
+        atualizados++;
+      } else {
+        await idbAdd('cadastro', obj);
+        novos++;
+      }
+    }
+    const msg = `✅ Recebido: ${novos} novos + ${atualizados} atualizados`;
+    if(info) info.textContent = msg;
+    toast(msg,'s');
+    refreshStatus();
+    ['cadastro','cad1','cad2','cad3'].forEach(p=>{
+      const el=document.getElementById('pg-'+p);
+      if(el&&el.querySelector('tbody')){
+        cadRender(p,{cadastro:null,cad1:1,cad2:2,cad3:3}[p],1);
+      }
+    });
+  }catch(e){
+    if(info) info.textContent = '❌ ' + e.message;
+    toast('Erro ao receber cadastro: '+e.message,'e');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  SYNC REGISTROS
+// ══════════════════════════════════════════════════════════
+
+// Enviar registros locais → planilha (apenas novos, sem duplicar)
+async function gsSyncRegistrosEnviar(){
+  const info = document.getElementById('gs-reg-info');
+  if(!gsGetUrl()){ toast('Configure a URL do Apps Script primeiro','w'); go('gsheets'); return; }
+  try{
+    if(info) info.textContent = '⏳ Enviando registros...';
+    const all = await idbGetAll('registros');
+    if(!all.length){ if(info) info.textContent = 'Nenhum registro local para enviar.'; return; }
+    // Remove 'id' do IndexedDB
+    const rows = all.map(r => { const {id,...rest}=r; return rest; });
+    const res = await gsPost('addRegistros', {rows});
+    const msg = `✅ ${res.inserted} novos enviados · ${res.duplicates} já existiam na planilha`;
+    if(info) info.textContent = msg;
+    toast(msg,'s');
+  }catch(e){
+    if(info) info.textContent = '❌ ' + e.message;
+    toast('Erro ao enviar registros: '+e.message,'e');
+  }
+}
+
+// Receber registros da planilha → IndexedDB (merge por chave)
+async function gsSyncRegistrosReceber(){
+  const info = document.getElementById('gs-reg-info');
+  if(!gsGetUrl()){ toast('Configure a URL do Apps Script primeiro','w'); go('gsheets'); return; }
+  try{
+    if(info) info.textContent = '⏳ Recebendo registros da nuvem...';
+    const rows = await gsGet('getRegistros');
+    if(!rows||!rows.length){ if(info) info.textContent = 'A planilha de registros está vazia.'; return; }
+    // Carrega chaves locais para dedup
+    const local = await idbGetAll('registros');
+    const chaves = new Set(local.map(r => r.chave));
+    let novos = 0;
+    for(const r of rows){
+      const chave = String(r.chave||'');
+      if(!chave || chaves.has(chave)) continue;
+      const obj = {
+        chave,
+        pis: String(r.pis||''),
+        matricula: String(r.matricula||''),
+        nome: String(r.nome||''),
+        cargo: String(r.cargo||''),
+        turno: parseInt(r.turno)||0,
+        data: String(r.data||''),
+        hora: String(r.hora||''),
+        num_reg: String(r.num_reg||''),
+        arquivo: String(r.arquivo||''),
+        importado_em: r.importado_em||new Date().toISOString()
+      };
+      try{ await idbAdd('registros', obj); novos++; chaves.add(chave); }catch(_){}
+    }
+    const msg = `✅ ${novos} novos registros recebidos da nuvem`;
+    if(info) info.textContent = msg;
+    toast(msg,'s');
+    refreshStatus();
+  }catch(e){
+    if(info) info.textContent = '❌ ' + e.message;
+    toast('Erro ao receber registros: '+e.message,'e');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  HOOKS AUTOMÁTICOS — sync silencioso ao cadastrar/editar/excluir
+//  (só age se a URL estiver configurada — falha silenciosa)
+// ══════════════════════════════════════════════════════════
+
+async function gsAutoAddFuncionario(func){
+  if(!gsGetUrl()) return;
+  try{ await gsPost('addFuncionario', {func}); }
+  catch(e){ console.warn('[GSheets auto-add]', e.message); }
+}
+async function gsAutoUpdateFuncionario(func){
+  if(!gsGetUrl()) return;
+  try{ await gsPost('updateFuncionario', {func}); }
+  catch(e){ console.warn('[GSheets auto-update]', e.message); }
+}
+async function gsAutoDeleteFuncionario(pis){
+  if(!gsGetUrl()) return;
+  try{ await gsPost('deleteFuncionario', {pis}); }
+  catch(e){ console.warn('[GSheets auto-delete]', e.message); }
+}
+async function gsAutoAddRegistros(rows){
+  if(!gsGetUrl()||!rows.length) return;
+  try{ await gsPost('addRegistros', {rows}); }
+  catch(e){ console.warn('[GSheets auto-reg]', e.message); }
 }
 
 // ══════════════════════════════════════════════════════════
