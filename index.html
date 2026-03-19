@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sistema de Controle de Ponto v3.0</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+/* ══ TOKENS ══ */
+:root{
+  --bg:#0D0F1A;--s1:#131626;--s2:#1A1E32;--s3:#222740;
+  --bd:#2A2F4E;--bd2:#353A5C;
+  --ac:#4C7BF4;--ac2:#6794F7;
+  --gr:#22C55E;--or:#F59E0B;--rd:#EF4444;--pu:#A855F7;--cy:#06B6D4;
+  --t1:#4C7BF4;--t2:#22C55E;--t3:#EF4444;
+  --tx:#E8EAFF;--tx2:#9AA3CC;--tx3:#5A6380;
+  --R:12px;--r:8px;--F:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--F);font-size:14px;overflow:hidden}
+
+/* ══ LAYOUT ══ */
+.app{display:flex;height:100vh}
+.sb{width:228px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column}
+.sb-h{padding:15px 14px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:11px}
+.sb-ico{width:36px;height:36px;background:linear-gradient(135deg,#4C7BF4,#A855F7);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sb-tit{font-size:10.5px;font-weight:700;color:var(--tx)}
+.sb-sub{font-size:9px;color:var(--tx3);margin-top:1px}
+.sb-nav{flex:1;padding:8px 7px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.ns{font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;padding:9px 10px 3px}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:var(--r);cursor:pointer;color:var(--tx2);font-size:12px;font-weight:500;transition:.13s;position:relative;user-select:none}
+.ni:hover{background:var(--s2);color:var(--tx)}
+.ni.on{background:rgba(76,123,244,.15);color:var(--ac)}
+.ni.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:55%;background:var(--ac);border-radius:0 2px 2px 0}
+.sb-ft{padding:10px 14px;border-top:1px solid var(--bd);font-size:9.5px;color:var(--tx3)}
+
+/* ══ MAIN ══ */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.tb{background:var(--s1);border-bottom:1px solid var(--bd);padding:0 22px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700}
+.tb-s{font-size:11px;color:var(--tx3);margin-top:1px}
+.tb-r{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:600;border:1px solid;white-space:nowrap}
+.pb{background:rgba(76,123,244,.12);border-color:rgba(76,123,244,.3);color:#7B9FF8}
+.pg2{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.3);color:#4ADE80}
+.pr2{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#F87171}
+.po{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#FBB040}
+.pill .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.cnt{flex:1;overflow-y:auto;padding:20px 22px}
+.page{display:none}.page.on{display:block}
+
+/* ══ GRID ══ */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
+
+/* ══ CARD ══ */
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--R);padding:16px}
+.ctit{font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.cbar{width:3px;height:12px;background:var(--ac);border-radius:2px;flex-shrink:0}
+
+/* ══ KPI ══ */
+.kpi{background:var(--s1);border:1px solid var(--bd);border-radius:var(--R);padding:14px 16px;position:relative;overflow:hidden;transition:.2s}
+.kpi:hover{border-color:var(--bd2)}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.kb::after{background:linear-gradient(90deg,var(--ac),var(--pu))}
+.kg::after{background:linear-gradient(90deg,var(--gr),var(--cy))}
+.ko::after{background:linear-gradient(90deg,var(--or),#F97316)}
+.kr::after{background:linear-gradient(90deg,var(--rd),#EC4899)}
+.kl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.kv{font-size:24px;font-weight:800;margin:4px 0 2px;line-height:1}
+.kb .kv{color:var(--ac)}.kg .kv{color:var(--gr)}.ko .kv{color:var(--or)}.kr .kv{color:var(--rd)}
+.ks{font-size:10.5px;color:var(--tx3)}
+.ki{position:absolute;right:12px;top:12px;font-size:20px;opacity:.1}
+
+/* ══ BTN ══ */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:var(--r);border:none;cursor:pointer;font-size:12.5px;font-weight:600;font-family:var(--F);transition:.15s;white-space:nowrap;line-height:1}
+.bac{background:var(--ac);color:#fff}.bac:hover{background:var(--ac2);transform:translateY(-1px)}
+.bgr{background:var(--gr);color:#fff}.bgr:hover{background:#16a34a;transform:translateY(-1px)}
+.bor{background:var(--or);color:#fff}.bor:hover{background:#D97706;transform:translateY(-1px)}
+.brd{background:var(--rd);color:#fff}.brd:hover{background:#DC2626;transform:translateY(-1px)}
+.bpu{background:var(--pu);color:#fff}.bpu:hover{background:#9333EA;transform:translateY(-1px)}
+.bcy{background:var(--cy);color:#fff}.bcy:hover{background:#0891B2;transform:translateY(-1px)}
+.bgh{background:var(--s2);color:var(--tx2);border:1px solid var(--bd)}.bgh:hover{background:var(--s3);color:var(--tx)}
+.bsm{padding:5px 11px;font-size:11px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+
+/* ══ INPUTS ══ */
+input,select,textarea{background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:var(--r);padding:7px 11px;font-size:12.5px;font-family:var(--F);outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(76,123,244,.1)}
+input::placeholder{color:var(--tx3)}
+label{font-size:11.5px;font-weight:500;color:var(--tx2);margin-bottom:4px;display:block}
+.fg{display:flex;flex-direction:column;margin-bottom:10px}
+.fg input,.fg select{width:100%}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ══ DROP ZONE ══ */
+.dz{border:2px dashed var(--bd2);border-radius:var(--R);padding:36px 20px;text-align:center;cursor:pointer;transition:.2s;background:var(--s2);position:relative;margin-bottom:12px}
+.dz.hv{border-color:var(--ac);background:rgba(76,123,244,.07)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-i{font-size:32px;margin-bottom:8px;opacity:.45}
+.dz-t{font-size:14px;font-weight:600;margin-bottom:4px}
+.dz-s{font-size:11.5px;color:var(--tx3)}
+.flist{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fi{display:flex;align-items:center;gap:9px;padding:6px 11px;background:var(--s3);border-radius:var(--r);font-size:11.5px;border:1px solid var(--bd)}
+.fi .fn{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi .fs{color:var(--tx3);flex-shrink:0}
+.fi .fx{cursor:pointer;color:var(--tx3);font-size:15px;flex-shrink:0;transition:.13s;line-height:1}.fi .fx:hover{color:var(--rd)}
+
+/* ══ PROGRESS ══ */
+.pbar{background:var(--s3);border-radius:4px;height:6px;overflow:hidden;margin:7px 0}
+.pf{height:100%;border-radius:4px;transition:width .25s;background:linear-gradient(90deg,var(--ac),var(--pu))}
+
+/* ══ TABLE ══ */
+.tw{overflow:auto;border-radius:var(--R);border:1px solid var(--bd)}
+.tw table{width:100%;border-collapse:collapse;font-size:12px}
+.tw thead{position:sticky;top:0;z-index:2}
+.tw th{background:var(--s2);color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:9px 11px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap;cursor:pointer;user-select:none}
+.tw th:hover{color:var(--tx)}
+.tw th.asc::after{content:' ▲'}.tw th.desc::after{content:' ▼'}
+.tw td{padding:8px 11px;border-bottom:1px solid rgba(42,47,78,.45);vertical-align:middle}
+.tw tr:last-child td{border-bottom:none}
+.tw tbody tr:hover td{background:rgba(26,30,50,.9)}
+.mono{font-family:'Courier New',monospace;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.bt1{background:rgba(76,123,244,.2);color:#7B9FF8}
+.bt2{background:rgba(34,197,94,.2);color:#4ADE80}
+.bt3{background:rgba(239,68,68,.2);color:#F87171}
+.bt0{background:rgba(90,99,128,.18);color:var(--tx3)}
+
+/* ══ FILTER BAR ══ */
+.fb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:11px}
+.fb input{width:200px}.fb select{width:120px}
+
+/* ══ PAGINATION ══ */
+.pag{display:flex;align-items:center;justify-content:space-between;margin-top:9px;flex-wrap:wrap;gap:8px}
+.pag-i{font-size:11px;color:var(--tx3)}.pag-b{display:flex;gap:6px}
+
+/* ══ STEPS ══ */
+.steps{display:flex;margin-bottom:16px}
+.step{flex:1;padding:9px 12px;background:var(--s2);border:1px solid var(--bd);text-align:center;font-size:10.5px;font-weight:600;color:var(--tx3);transition:.2s}
+.step:first-child{border-radius:var(--r) 0 0 var(--r)}.step:last-child{border-radius:0 var(--r) var(--r) 0}
+.step.done{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--gr)}
+.step.act{background:rgba(76,123,244,.1);border-color:rgba(76,123,244,.3);color:var(--ac)}
+.sn{font-size:16px;font-weight:800;display:block;margin-bottom:1px}
+
+/* ══ RESULT ══ */
+.rg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.ri{background:var(--s2);border-radius:var(--r);padding:11px 13px;border:1px solid var(--bd)}
+.ri-n{font-size:20px;font-weight:800;margin-bottom:2px}.ri-l{font-size:10.5px;color:var(--tx3)}
+
+/* ══ TURNO CHIPS ══ */
+.tcs{display:flex;gap:7px;flex-wrap:wrap}
+.tc{padding:7px 16px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;border:2px solid var(--bd2);color:var(--tx2);transition:.15s;user-select:none}
+.tc[data-t="1"].sel{background:rgba(76,123,244,.2);border-color:var(--t1);color:var(--t1)}
+.tc[data-t="2"].sel{background:rgba(34,197,94,.2);border-color:var(--t2);color:var(--t2)}
+.tc[data-t="3"].sel{background:rgba(239,68,68,.2);border-color:var(--t3);color:var(--t3)}
+
+/* ══ MODAL ══ */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);opacity:0;pointer-events:none;transition:.2s}
+.mo.open{opacity:1;pointer-events:all}
+.modal{background:var(--s1);border:1px solid var(--bd2);border-radius:15px;padding:24px;width:480px;max-width:92vw;max-height:90vh;overflow-y:auto;transform:translateY(18px);transition:.2s}
+.mo.open .modal{transform:none}
+.mt{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:9px}
+.ma{display:flex;gap:9px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+
+/* ══ TOAST ══ */
+#toast{position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.ti{background:var(--s2);border:1px solid var(--bd2);border-radius:9px;padding:10px 14px;font-size:12.5px;display:flex;align-items:center;gap:8px;animation:sIn .3s ease;max-width:320px;box-shadow:0 6px 20px rgba(0,0,0,.45);pointer-events:all}
+.ti.s{border-color:rgba(34,197,94,.45)}.ti.e{border-color:rgba(239,68,68,.45)}
+.ti.i{border-color:rgba(76,123,244,.45)}.ti.w{border-color:rgba(245,158,11,.45)}
+@keyframes sIn{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fOut{to{transform:translateX(24px);opacity:0}}
+
+/* ══ MISC ══ */
+.ch-w{position:relative;height:200px}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.sh-t{font-size:15px;font-weight:700}.sh-s{font-size:11px;color:var(--tx3);margin-top:2px}
+.empty{text-align:center;padding:48px 20px}.ei{font-size:36px;opacity:.2;margin-bottom:10px}.et{font-size:13px;color:var(--tx3)}
+.db-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r);background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.25);font-size:11px;color:var(--cy)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.sp{width:15px;height:15px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.abox{padding:10px 14px;border-radius:var(--r);font-size:12px;margin-bottom:10px;display:flex;gap:9px;align-items:flex-start;line-height:1.55}
+.abox.info{background:rgba(76,123,244,.1);border:1px solid rgba(76,123,244,.3);color:#9BB4FA}
+.abox.warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#FBB040}
+.abox.suc{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ADE80}
+.is{margin-bottom:18px}
+.is h3{font-size:11.5px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.is h3::before{content:'';display:inline-block;width:3px;height:12px;background:var(--ac);border-radius:2px}
+.ilist{display:flex;flex-direction:column;gap:5px}
+.ii{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--s2);border-radius:var(--r);border:1px solid var(--bd);font-size:12px;line-height:1.55;color:var(--tx2)}
+.ii .em{font-size:16px;flex-shrink:0;margin-top:1px}
+.ii b{color:var(--tx)}
+.ii code{background:var(--s3);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-family:'Courier New',monospace;font-size:10.5px;color:var(--cy)}
+.atbl{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:8px}
+.atbl th{background:var(--s3);color:var(--tx2);padding:6px 9px;text-align:left;font-size:10px;text-transform:uppercase;border:1px solid var(--bd)}
+.atbl td{padding:5px 9px;border:1px solid var(--bd);vertical-align:top;color:var(--tx2)}
+.atbl td:first-child{font-family:'Courier New',monospace;color:var(--cy);white-space:nowrap}
+.atbl .ok{color:var(--gr)}.atbl .sk{color:var(--tx3)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sb">
+  <div class="sb-h">
+    <div class="sb-ico">🕐</div>
+    <div><div class="sb-tit">CONTROLE DE PONTO</div><div class="sb-sub">v1.0 · IndexedDB</div></div>
+  </div>
+  <nav class="sb-nav">
+    <div class="ns">Painel</div>
+    <div class="ni on" data-p="dashboard">📊 Dashboard</div>
+    <div class="ns">Dados</div>
+    <div class="ni" data-p="instrucoes">📖 Instruções de Uso</div>
+    <div class="ni" data-p="importar">📥 Importar TXT (AFD)</div>
+    <div class="ni" data-p="registros">🗄️ Registros de Ponto</div>
+    <div class="ns">Cadastros</div>
+    <div class="ni" data-p="cadastro">👥 Cadastro Geral</div>
+    <div class="ni" data-p="cad1"><span style="color:var(--t1)">●</span> CadastroTurno(1)</div>
+    <div class="ni" data-p="cad2"><span style="color:var(--t2)">●</span> CadastroTurno(2)</div>
+    <div class="ni" data-p="cad3"><span style="color:var(--t3)">●</span> CadastroTurno(3)</div>
+    <div class="ns">Relatórios</div>
+    <div class="ni" data-p="relatorio">📋 Relatório por Turno</div>
+    <div class="ni" data-p="espelho">🪞 Espelho por Turno</div>
+    <div class="ns">Sistema</div>
+    <div class="ni" data-p="log">⚠️ Log de Erros</div>
+  </nav>
+  <div class="sb-ft">💾 IndexedDB · Wanderley.M.S.Bazan · 2026</div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <header class="tb">
+    <div><div class="tb-t" id="ttit">Dashboard</div><div class="tb-s" id="tsub">Visão geral</div></div>
+    <div class="tb-r">
+      <span class="db-badge">💾 IndexedDB</span>
+      <span class="pill pb"><span class="dot"></span><span id="pc">0</span> cadastrados</span>
+      <span class="pill pg2"><span class="dot"></span><span id="pr">0</span> registros</span>
+      <span class="pill pr2"><span class="dot"></span><span id="pe">0</span> erros</span>
+    </div>
+  </header>
+  <div class="cnt">
+
+<!-- ══ DASHBOARD ══ -->
+<div class="page on" id="pg-dashboard">
+  <div class="g4">
+    <div class="kpi kb"><div class="ki">👥</div><div class="kl">Cadastrados</div><div class="kv" id="k-cad">—</div><div class="ks">funcionários ativos</div></div>
+    <div class="kpi kg"><div class="ki">⏱️</div><div class="kl">Registros</div><div class="kv" id="k-reg">—</div><div class="ks">batidas importadas</div></div>
+    <div class="kpi ko"><div class="ki">🏢</div><div class="kl">Turnos</div><div class="kv">3</div><div class="ks">T1 · T2 · T3</div></div>
+    <div class="kpi kr"><div class="ki">⚠️</div><div class="kl">Erros</div><div class="kv" id="k-err">—</div><div class="ks">no log</div></div>
+  </div>
+  <div class="g3">
+    <div class="kpi kb"><div class="kl">TURNO 1</div><div class="kv" id="kt1">—</div><div class="ks" id="kt1s">— funcionários</div></div>
+    <div class="kpi kg"><div class="kl">TURNO 2</div><div class="kv" id="kt2">—</div><div class="ks" id="kt2s">— funcionários</div></div>
+    <div class="kpi kr"><div class="kl">TURNO 3</div><div class="kv" id="kt3">—</div><div class="ks" id="kt3s">— funcionários</div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="ctit"><span class="cbar"></span>BATIDAS POR DIA</div><div class="ch-w"><canvas id="ch-dia"></canvas></div></div>
+    <div class="card"><div class="ctit"><span class="cbar" style="background:var(--or)"></span>DISTRIBUIÇÃO POR TURNO</div><div class="ch-w"><canvas id="ch-dnt"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ══ INSTRUÇÕES ══ -->
+<div class="page" id="pg-instrucoes">
+  <div class="sh"><div><div class="sh-t">📖 Instruções de Uso</div><div class="sh-s">Guia completo do sistema</div></div></div>
+  <div class="g2" style="margin-bottom:0">
+    <div>
+      <div class="is"><h3>1. Como funciona</h3><div class="ilist">
+        <div class="ii"><span class="em">🌐</span><span>Este sistema roda <b>100% no navegador</b> </span></div>
+        <div class="ii"><span class="em">💾</span><span>Os dados ficam salvos no <b>IndexedDB</b> — banco de dados nativo do navegador. Os dados <b>persistem entre sessões</b> automaticamente.</span></div>
+        <div class="ii"><span class="em">⚠️</span><span>Limpar o cache/dados do navegador apaga o banco. Use o botão <b>"Exportar Cadastro"</b> para fazer backup periódico.</span></div>
+      </div></div>
+      <div class="is"><h3>2. Fluxo de uso</h3><div class="ilist">
+        <div class="ii"><span class="em">1️⃣</span><span><b>Cadastro:</b> verifique os funcionários em <b>Cadastro Geral</b> e nas abas de turno. Adicione, edite ou remova diretamente na tabela.</span></div>
+        <div class="ii"><span class="em">2️⃣</span><span><b>Importar TXT:</b> acesse <b>Importar TXT (AFD)</b>, arraste os arquivos <code>.txt</code> e clique em Importar. O sistema lê, valida e salva no IndexedDB.</span></div>
+        <div class="ii"><span class="em">3️⃣</span><span><b>Relatório por Turno:</b> clique em Gerar — baixa um XLSX com <code>Relat T1/T2/T3</code> (detalhado) e <code>Resumo T1/T2/T3</code> (consolidado).</span></div>
+        <div class="ii"><span class="em">4️⃣</span><span><b>Espelho por Turno:</b> selecione os turnos e gere o espelho individual com até 8 batidas por dia, total trabalhado e campo de expediente.</span></div>
+      </div></div>
+      <div class="is"><h3>3. Formato AFD (Portaria 1510)</h3>
+        <div class="abox info">ℹ️ Somente linhas com <b>tipo 3</b> (posição 10) são processadas — marcações de ponto. Outros tipos são ignorados.</div>
+        <table class="atbl"><thead><tr><th>Posição</th><th>Campo</th><th>Status</th></tr></thead><tbody>
+          <tr><td>1–9</td><td>NSR — Nº Sequencial de Registro</td><td class="ok">✅ Lido</td></tr>
+          <tr><td>10</td><td>Tipo ("3" = batida de ponto)</td><td class="ok">✅ Filtrado</td></tr>
+          <tr><td>11–12</td><td>Dia (DD) 01–31</td><td class="ok">✅ Validado</td></tr>
+          <tr><td>13–14</td><td>Mês (MM) 01–12</td><td class="ok">✅ Validado</td></tr>
+          <tr><td>15–18</td><td>Ano (AAAA) 2000–2099</td><td class="ok">✅ Validado</td></tr>
+          <tr><td>19–20</td><td>Hora (HH) 00–23</td><td class="ok">✅ Validado</td></tr>
+          <tr><td>21–22</td><td>Minuto (MM) 00–59</td><td class="ok">✅ Validado</td></tr>
+          <tr><td>24–34</td><td>PIS/NIS (11 dígitos)</td><td class="ok">✅ Chave de cadastro</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div>
+      <div class="is"><h3>4. Espelho — legenda de cores</h3><div class="ilist">
+        <div class="ii"><span class="em">📅</span><span>Col <b>A/B</b> = Data e dia da semana (SEG…DOM)</span></div>
+        <div class="ii"><span class="em">⏱️</span><span>Cols <b>C–J</b> = Ponto 1 a Ponto 8 (até 8 batidas/dia)</span></div>
+        <div class="ii"><span class="em">🟢</span><span>Col <b>K</b> = Total trabalhado: <code>(P2-P1)+(P4-P3)+...</code></span></div>
+        <div class="ii"><span class="em">✏️</span><span>Col <b>L</b> = Expediente — preencher manualmente em <code>h:mm</code></span></div>
+        <div class="ii"><span class="em">📊</span><span>Col <b>M</b> = Saldo = K − L</span></div>
+        <div class="ii" style="background:rgba(255,179,0,.1);border-color:rgba(255,179,0,.35)"><span class="em">🟠</span><span>Linha <b>laranja</b> = batida 00:xx → exibida como 24:xx (turno noturno)</span></div>
+        <div class="ii" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3)"><span class="em">🔴</span><span>Total <b>negativo</b> → corrigir antes de validar</span></div>
+      </div></div>
+      <div class="is"><h3>5. Banco de dados (IndexedDB)</h3><div class="ilist">
+        <div class="ii"><span class="em">🗃️</span><span>Store <b>cadastro</b>: funcionários com PIS, matrícula, nome, cargo, turno</span></div>
+        <div class="ii"><span class="em">🗃️</span><span>Store <b>registros</b>: batidas importadas dos arquivos AFD</span></div>
+        <div class="ii"><span class="em">🗃️</span><span>Store <b>log</b>: erros de validação durante importação</span></div>
+        <div class="ii"><span class="em">🔒</span><span>Deduplicação por chave: <code>PIS|Data|Hora|NSR</code> — nunca duplica</span></div>
+        <div class="ii"><span class="em">⬇️</span><span>Botão <b>"Exportar XLSX"</b> no cadastro faz backup das 4 abas</span></div>
+        <div class="ii"><span class="em">🔄</span><span>Botão <b>"Resetar DB"</b> apaga tudo e reimporta o cadastro original de 126 funcionários</span></div>
+      </div></div>
+    
+    </div>
+  </div>
+</div>
+
+<!-- ══ IMPORTAR ══ -->
+<div class="page" id="pg-importar">
+  <div class="sh"><div><div class="sh-t">Importar Arquivos AFD</div><div class="sh-s">Portaria 1510 — tipo 3 · salva no IndexedDB</div></div></div>
+  <div class="steps">
+    <div class="step act" id="st1"><span class="sn">1</span>Selecionar</div>
+    <div class="step" id="st2"><span class="sn">2</span>Processar</div>
+    <div class="step" id="st3"><span class="sn">3</span>Resultado</div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="dz" id="dz"><input type="file" id="fi" accept=".txt" multiple>
+      <div class="dz-i">📂</div>
+      <div class="dz-t">Arraste os arquivos TXT aqui</div>
+      <div class="dz-s">ou clique para selecionar · múltiplos arquivos permitidos</div>
+    </div>
+    <div class="flist" id="flist"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn bac" id="btn-imp" onclick="importar()">📥 Importar Selecionados</button>
+    <button class="btn brd bgh" onclick="openMo('m-lim')">🗑️ Limpar Registros</button>
+  </div>
+  <div id="ip" style="display:none;margin-top:12px">
+    <div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:7px"><div class="sp"></div><span id="ptxt" style="font-size:13px;color:var(--tx2)">Processando...</span></div><div class="pbar"><div class="pf" id="pf" style="width:0%"></div></div></div>
+  </div>
+  <div id="ir" style="display:none;margin-top:12px">
+    <div class="card">
+      <div class="ctit"><span class="cbar" style="background:var(--gr)"></span>RESULTADO</div>
+      <div class="rg">
+        <div class="ri"><div class="ri-n" style="color:var(--gr)" id="ri1">0</div><div class="ri-l">✅ Importados</div></div>
+        <div class="ri"><div class="ri-n" style="color:var(--or)" id="ri2">0</div><div class="ri-l">⏭️ Duplicatas</div></div>
+        <div class="ri"><div class="ri-n" style="color:var(--rd)" id="ri3">0</div><div class="ri-l">⚠️ PIS sem cadastro</div></div>
+        <div class="ri"><div class="ri-n" style="color:var(--tx3)" id="ri4">0</div><div class="ri-l">🚫 Linhas inválidas</div></div>
+      </div>
+      <div id="ri-det" style="margin-top:10px;font-size:11.5px;color:var(--tx3)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REGISTROS ══ -->
+<div class="page" id="pg-registros">
+  <div class="sh"><div><div class="sh-t">Registros de Ponto</div><div class="sh-s" id="reg-sub">Todos os registros</div></div></div>
+  <div class="fb">
+    <input id="rb" placeholder="🔍 Buscar nome ou PIS..." oninput="regRender(1)" style="width:220px">
+    <select id="rt" onchange="regRender(1)" style="width:120px">
+      <option value="">Todos Turnos</option><option value="1">Turno 1</option>
+      <option value="2">Turno 2</option><option value="3">Turno 3</option>
+    </select>
+    <select id="rd-ord" onchange="regRender(1)" style="width:150px">
+      <option value="nome">Ordenar: Nome</option>
+      <option value="data">Ordenar: Data</option>
+      <option value="hora">Ordenar: Hora</option>
+    </select>
+  </div>
+  <div class="tw" style="max-height:calc(100vh - 290px)">
+    <table><thead><tr>
+      <th>Turno</th><th>Matrícula</th><th>Nome</th><th>Cargo</th>
+      <th>PIS</th><th>Data</th><th>Hora</th><th>Arquivo</th>
+    </tr></thead><tbody id="reg-body"></tbody></table>
+  </div>
+  <div class="pag">
+    <div class="pag-i" id="reg-pag"></div>
+    <div class="pag-b">
+      <button class="btn bgh bsm" id="rp-" onclick="reg_pg--;regRender(reg_pg)">← Ant.</button>
+      <button class="btn bgh bsm" id="rp+" onclick="reg_pg++;regRender(reg_pg)">Próx. →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CADASTROS (gerados via JS) ══ -->
+<div class="page" id="pg-cadastro"></div>
+<div class="page" id="pg-cad1"></div>
+<div class="page" id="pg-cad2"></div>
+<div class="page" id="pg-cad3"></div>
+
+<!-- ══ RELATÓRIO ══ -->
+<div class="page" id="pg-relatorio">
+  <div class="sh"><div><div class="sh-t">Relatório por Turno</div><div class="sh-s">Gera Relat+Resumo T1/T2/T3 em XLSX com filtros e formatação</div></div></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ctit"><span class="cbar"></span>ABAS GERADAS</div>
+      <div style="font-size:12px;display:flex;flex-direction:column;gap:8px">
+        <div class="abox info">📋 <b>Relat T1/T2/T3</b> — matrícula, nome, cargo, PIS, data, hora, qtd. batidas</div>
+        <div class="abox suc">📊 <b>Resumo T1/T2/T3</b> — total de batidas por funcionário com total geral</div>
+        <div class="abox info">✅ AutoFiltro, Freeze Panes e linhas zebradas em todas as abas</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctit"><span class="cbar" style="background:var(--gr)"></span>STATUS ATUAL</div>
+      <div style="font-size:12px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--tx3)">Total registros</span><b id="rs-tot">—</b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--tx3)">Turno 1</span><b style="color:var(--t1)" id="rs-t1">—</b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--tx3)">Turno 2</span><b style="color:var(--t2)" id="rs-t2">—</b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--tx3)">Turno 3</span><b style="color:var(--t3)" id="rs-t3">—</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+      <div><div style="font-size:14px;font-weight:700;margin-bottom:3px">Gerar Relatório Completo</div>
+      <div style="font-size:11.5px;color:var(--tx3)">6 abas · XLSX formatado igual ao VBA original</div></div>
+      <button class="btn bac" id="btn-rel" onclick="gerarRel()">📥 Gerar e Baixar XLSX</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ESPELHO ══ -->
+<div class="page" id="pg-espelho">
+  <div class="sh"><div><div class="sh-t">Espelho de Ponto por Turno</div><div class="sh-s">Espelho individual com até 8 batidas por dia</div></div></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ctit"><span class="cbar" style="background:var(--pu)"></span>SELECIONAR TURNOS</div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:11px">Escolha os turnos para incluir no espelho:</div>
+      <div class="tcs">
+        <div class="tc sel" data-t="1" onclick="this.classList.toggle('sel')">Turno 1</div>
+        <div class="tc sel" data-t="2" onclick="this.classList.toggle('sel')">Turno 2</div>
+        <div class="tc sel" data-t="3" onclick="this.classList.toggle('sel')">Turno 3</div>
+      </div>
+      <div style="display:flex;gap:7px;margin-top:10px">
+        <button class="btn bgh bsm" onclick="document.querySelectorAll('.tc').forEach(c=>c.classList.add('sel'))">Todos</button>
+        <button class="btn bgh bsm" onclick="document.querySelectorAll('.tc').forEach(c=>c.classList.remove('sel'))">Nenhum</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctit"><span class="cbar" style="background:var(--cy)"></span>ESTRUTURA DO ESPELHO</div>
+      <div style="font-size:11.5px;color:var(--tx3);display:flex;flex-direction:column;gap:5px">
+        <div>📅 <b style="color:var(--tx)">A/B</b> = Data e dia da semana</div>
+        <div>⏱️ <b style="color:var(--tx)">C–J</b> = Ponto 1 a Ponto 8</div>
+        <div>🟢 <b style="color:var(--tx)">K</b> = Total trabalhado automático</div>
+        <div>✏️ <b style="color:var(--tx)">L</b> = Expediente (manual)</div>
+        <div>📊 <b style="color:var(--tx)">M</b> = Saldo = K − L</div>
+        <div style="color:#FFB300">🟠 Laranja = batida 00:xx (turno noturno)</div>
+        <div>🔴/🌹 Sábado e Domingo diferenciados</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+      <div><div style="font-size:14px;font-weight:700;margin-bottom:3px">Gerar Espelho de Ponto</div>
+      <div style="font-size:11.5px;color:var(--tx3)">Uma aba por turno · Freeze linha 5 · Pronto para impressão</div></div>
+      <button class="btn bpu" id="btn-esp" onclick="gerarEsp()">🪞 Gerar e Baixar XLSX</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOG ══ -->
+<div class="page" id="pg-log">
+  <div class="sh">
+    <div><div class="sh-t">Log de Erros</div><div class="sh-s">PIS sem cadastro e linhas inválidas</div></div>
+    <button class="btn brd bgh bsm" onclick="logLimpar()">🗑️ Limpar Log</button>
+  </div>
+  <div class="tw" style="max-height:calc(100vh - 200px)">
+    <table><thead><tr><th>Data/Hora</th><th>Módulo</th><th>Linha</th><th>Descrição</th></tr></thead>
+    <tbody id="log-body"></tbody></table>
+  </div>
+  <div class="empty" id="log-empty" style="display:none"><div class="ei">✅</div><div class="et">Nenhum erro registrado</div></div>
+</div>
+
+  </div><!-- /cnt -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL LIMPAR REGISTROS -->
+<div class="mo" id="m-lim">
+  <div class="modal">
+    <div class="mt">🗑️ Limpar Registros de Ponto</div>
+    <p style="font-size:13px;color:var(--tx2);line-height:1.7">Todos os <b>registros de ponto</b> e o <b>log de erros</b> serão apagados do IndexedDB.<br>O cadastro de funcionários será mantido.<br><br><strong style="color:var(--rd)">Esta ação não pode ser desfeita.</strong></p>
+    <div class="ma"><button class="btn bgh" onclick="closeMo('m-lim')">Cancelar</button><button class="btn brd" onclick="limparRegistros()">Confirmar</button></div>
+  </div>
+</div>
+
+<!-- MODAL FUNCIONÁRIO -->
+<div class="mo" id="m-func">
+  <div class="modal">
+    <div class="mt" id="mf-tit">➕ Novo Funcionário</div>
+    <div class="fr2">
+      <div class="fg"><label>PIS (11 dígitos) *</label><input id="mf-pis" maxlength="11" placeholder="12345678901" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+      <div class="fg"><label>Matrícula</label><input id="mf-mat" placeholder="8000"></div>
+    </div>
+    <div class="fg"><label>Nome Completo *</label><input id="mf-nome" placeholder="NOME COMPLETO" style="width:100%;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="fr2">
+      <div class="fg"><label>Cargo</label><input id="mf-cargo" placeholder="COLETOR" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fg"><label>Turno</label>
+        <select id="mf-turno">
+          <option value="0">Sem turno</option>
+          <option value="1">Turno 1</option>
+          <option value="2">Turno 2</option>
+          <option value="3">Turno 3</option>
+        </select>
+      </div>
+    </div>
+    <div class="ma"><button class="btn bgh" onclick="closeMo('m-func')">Cancelar</button><button class="btn bac" onclick="salvarFunc()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL EXCLUIR -->
+<div class="mo" id="m-del">
+  <div class="modal">
+    <div class="mt">⚠️ Confirmar Exclusão</div>
+    <p style="font-size:13px;color:var(--tx2);line-height:1.7">O funcionário <b id="del-nome"></b> será removido do cadastro.<br>Os registros de ponto históricos serão mantidos.<br><br><strong style="color:var(--rd)">Deseja continuar?</strong></p>
+    <div class="ma"><button class="btn bgh" onclick="closeMo('m-del')">Cancelar</button><button class="btn brd" onclick="confirmarDel()">Excluir</button></div>
+  </div>
+</div>
+
+<!-- MODAL RESET DB -->
+<div class="mo" id="m-reset">
+  <div class="modal">
+    <div class="mt">🔄 Resetar Banco de Dados</div>
+    <p style="font-size:13px;color:var(--tx2);line-height:1.7">Isso vai <b>apagar TUDO</b> (cadastro, registros e log) e reimportar os <b>126 funcionários originais</b>.<br><br><strong style="color:var(--rd)">Todos os seus dados serão perdidos!</strong></p>
+    <div class="ma"><button class="btn bgh" onclick="closeMo('m-reset')">Cancelar</button><button class="btn brd" onclick="resetDB()">Resetar Tudo</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════════
+//  SEED DATA — 126 funcionários
+// ══════════════════════════════════════════════════════════
+const SEED=[{"pis":"12426712114","matricula":"7891","nome":"ADILSON ADAO FERREIRA","cargo":"COLETOR","turno":2},{"pis":"12787548158","matricula":"6751","nome":"ADRIANO BATISTA MENEZES","cargo":"VARREDOR","turno":0},{"pis":"12679708174","matricula":"8358","nome":"ADRIANO JESUS DE SOUZA","cargo":"COLETOR","turno":1},{"pis":"12801599141","matricula":"8185","nome":"ALEKSANDER ANDRE RODRIGUES","cargo":"SERVENTE DE PEDREIRO","turno":0},{"pis":"16122692140","matricula":"8681","nome":"ALESSANDRO DO NASCIMENTO SANTANA","cargo":"COLETOR","turno":3},{"pis":"16005471725","matricula":"8328","nome":"ALESSANDRO SANTOS TAVARES","cargo":"COLETOR","turno":0},{"pis":"16010907757","matricula":"8332","nome":"ALEX DA SILVA MORELLI","cargo":"COLETOR","turno":3},{"pis":"16138266391","matricula":"8709","nome":"ALEX JUNIOR RODRIGUES DA SILVA","cargo":"COLETOR","turno":2},{"pis":"12415265790","matricula":"3862","nome":"ALEXANDRE CRISTIANO DE JESUS","cargo":"COLETOR","turno":3},{"pis":"12950355147","matricula":"8403","nome":"ALUISIO WELLINGTON RODRIGUES FEITOSA","cargo":"COLETOR","turno":0},{"pis":"12511216932","matricula":"7119","nome":"ALVARO NOBRE DA SILVA","cargo":"MOTORISTA","turno":3},{"pis":"12598682175","matricula":"8697","nome":"AMAURI ROGÉRIO BORGES","cargo":"COLETOR","turno":2},{"pis":"12839285144","matricula":"8705","nome":"ANTONIO FRANCISCO FERREIRA DA SILVA","cargo":"COLETOR","turno":1},{"pis":"12325394982","matricula":"4757","nome":"ARMANDO FRUTUOSO","cargo":"MOTORISTA","turno":0},{"pis":"12797586184","matricula":"8275","nome":"ARNALDO ALVES","cargo":"ENCARREGADO DE COLETA","turno":1},{"pis":"16011950761","matricula":"8236","nome":"BRUNO BARBOSA CARDOSO","cargo":"COLETOR","turno":2},{"pis":"16125195199","matricula":"8712","nome":"BRUNO DE MOURA THOMAZIN","cargo":"COLETOR","turno":1},{"pis":"21201483303","matricula":"8396","nome":"BRUNO GUILHERME PEREIRA BARBOSA","cargo":"COLETOR","turno":1},{"pis":"12645073141","matricula":"8331","nome":"CARLOS APARECIDO MARCIANO VIEIRA","cargo":"FISCAL DE TURMA","turno":0},{"pis":"20698541531","matricula":"8595","nome":"CESAR EDUARDO RODRIGUES JUNIOR","cargo":"COLETOR","turno":3},{"pis":"12624298152","matricula":"8263","nome":"CLAUDIO ALVES DE LIMA","cargo":"MOTORISTA","turno":0},{"pis":"16178996218","matricula":"8325","nome":"CLEBER ANTONIO RUFINO","cargo":"COLETOR","turno":2},{"pis":"12657133144","matricula":"8361","nome":"CRISTIANO ALEIXO DE BARROS","cargo":"COLETOR","turno":2},{"pis":"20698558841","matricula":"8247","nome":"DANIEL MARTINS DE OLIVEIRA","cargo":"COLETOR","turno":1},{"pis":"19052805019","matricula":"8235","nome":"DANILO DE SENA MATOS","cargo":"COLETOR","turno":3},{"pis":"16134782131","matricula":"8490","nome":"DANILO SOARES AMARAL","cargo":"COLETOR","turno":2},{"pis":"21201776769","matricula":"8593","nome":"DANILO TEIXEIRA TOGNOZZI","cargo":"COLETOR","turno":1},{"pis":"12975167166","matricula":"8707","nome":"DAVID ADAN CANUTO","cargo":"COLETOR","turno":1},{"pis":"10854588032","matricula":"7637","nome":"DERIVALDO GOMES DOS SANTOS","cargo":"FISCAL DE TURMA","turno":1},{"pis":"12584121176","matricula":"6438","nome":"DIRCEU MARCOS BADECA","cargo":"COLETOR","turno":3},{"pis":"20341112474","matricula":"8592","nome":"DOUGLAS KAOAN IBARROLA DE ARRUDA","cargo":"COLETOR","turno":0},{"pis":"12652460252","matricula":"8491","nome":"DOUGLAS VICTORINO DOS SANTOS","cargo":"COLETOR","turno":2},{"pis":"27238065253","matricula":"8727","nome":"DOUGLAS WILLIAN VIEIRA MARTINS","cargo":"COLETOR","turno":3},{"pis":"16123140664","matricula":"8706","nome":"EDER JULIO DAMASCENO","cargo":"COLETOR","turno":1},{"pis":"12874782175","matricula":"8326","nome":"EDER TOKAWA DO NASCIMENTO","cargo":"COLETOR","turno":1},{"pis":"12336881243","matricula":"5924","nome":"EDILSON FRANCISCO DOS SANTOS","cargo":"FISCAL DE TURMA","turno":3},{"pis":"12710396140","matricula":"8251","nome":"EDIMILSON CANARIO COUTINHO","cargo":"MOTORISTA","turno":0},{"pis":"12492766138","matricula":"7432","nome":"EDNEI ARIDERLY NUNES PINTO","cargo":"COLETOR","turno":3},{"pis":"12485961710","matricula":"6556","nome":"EDSON MENDES DA SILVA","cargo":"COLETOR","turno":3},{"pis":"12359719078","matricula":"4388","nome":"ELIRALDO FRANCISCO DOS SANTOS","cargo":"MOTORISTA","turno":2},{"pis":"12900630160","matricula":"7885","nome":"ELIZEU PORFIRIO","cargo":"COLETOR","turno":0},{"pis":"12462990498","matricula":"7424","nome":"ELY FRATERNO XAVIER","cargo":"MOTORISTA","turno":1},{"pis":"19046488015","matricula":"8040","nome":"EMERSON CANDIDO DA SILVA","cargo":"COLETOR","turno":1},{"pis":"12678313176","matricula":"8297","nome":"ERITON MAURO FERREIRA DE LIMA","cargo":"MOTORISTA TRATOR","turno":1},{"pis":"12506192249","matricula":"6014","nome":"FABIANO FERREIRA DA SILVA","cargo":"FISCAL DE TURMA","turno":0},{"pis":"12472604752","matricula":"8730","nome":"FABIO OLIVEIRA DOS SANTOS","cargo":"COLETOR","turno":1},{"pis":"12963579146","matricula":"8409","nome":"FABRICIO DA SILVA SANTOS","cargo":"COLETOR","turno":1},{"pis":"16110925757","matricula":"8729","nome":"FABRICIO DOS SANTOS","cargo":"COLETOR","turno":0},{"pis":"12506191536","matricula":"6013","nome":"FERNANDO DOMINGOS DA SILVA","cargo":"COLETOR","turno":3},{"pis":"19045437484","matricula":"7881","nome":"FERNANDO OLIVEIRA LIMA","cargo":"COLETOR","turno":1},{"pis":"12777618188","matricula":"7353","nome":"FRANKLIN BORGES PESSATA","cargo":"COLETOR","turno":1},{"pis":"16226975769","matricula":"8596","nome":"GABRIEL DE CASTRO NAVARRO ALONSSO","cargo":"COLETOR","turno":1},{"pis":"16048926619","matricula":"8405","nome":"GEOVANIO DA SILVA","cargo":"COLETOR","turno":3},{"pis":"12119570525","matricula":"7643","nome":"GERALDO DO NASCIMENTO","cargo":"OPERADOR DE MAQUINAS II","turno":0},{"pis":"12457956538","matricula":"7347","nome":"GILBERTO CORREA DA SILVA","cargo":"MOTORISTA","turno":3},{"pis":"12553872781","matricula":"7651","nome":"GLAUCIO ALEXSANDRO KASPRZAK","cargo":"MOTORISTA","turno":3},{"pis":"12587570613","matricula":"8397","nome":"GUILHERME DA SILVA MAZINI","cargo":"COLETOR","turno":3},{"pis":"16226982641","matricula":"8410","nome":"GUILHERME VENANCIO DIAS DE OLIVEIRA","cargo":"COLETOR","turno":1},{"pis":"19054599335","matricula":"8334","nome":"HALISSON ROBERT DE SOUZA","cargo":"COLETOR","turno":3},{"pis":"12558365144","matricula":"6809","nome":"JAIR CICERO BASTOS","cargo":"COLETOR","turno":3},{"pis":"12526242829","matricula":"6080","nome":"JANIR FLAUZINO","cargo":"MOTORISTA","turno":3},{"pis":"16178632097","matricula":"8406","nome":"JEFERSON RICARDO QUEIROZ","cargo":"COLETOR","turno":3},{"pis":"20330567343","matricula":"7878","nome":"JEFFERSON ANCHIETA BARBOSA","cargo":"COLETOR","turno":3},{"pis":"12884315170","matricula":"7834","nome":"JEFFERSON FERNANDES DOS SANTOS","cargo":"COLETOR","turno":3},{"pis":"16253390962","matricula":"8728","nome":"JOAO GUILHERME CONSTANTINO","cargo":"COLETOR","turno":3},{"pis":"12698217180","matricula":"8086","nome":"JOAO RICARDO GONCALVES DE OLIVEIRA","cargo":"ENCARREGADO DE TURMA","turno":0},{"pis":"16253941004","matricula":"8597","nome":"JOAO THOMAZIN JUNIOR","cargo":"COLETOR","turno":3},{"pis":"16230942772","matricula":"8598","nome":"JOAO VITOR NOVAIS DA SILVA","cargo":"COLETOR","turno":1},{"pis":"20786398064","matricula":"8253","nome":"JOHNATAN OLIVEIRA FELIX","cargo":"COLETOR","turno":2},{"pis":"12869676176","matricula":"8309","nome":"JOSE EDUARDO TENORIO DA SILVA","cargo":"COLETOR","turno":1},{"pis":"12363775513","matricula":"7202","nome":"JOSE MARCIO PEREIRA DE SOUZA","cargo":"MOTORISTA","turno":1},{"pis":"12506115961","matricula":"8693","nome":"JOSE ROBERTO CORREA NUNES","cargo":"COLETOR","turno":0},{"pis":"12459195836","matricula":"6278","nome":"JOSE VALDECIR SANTANA","cargo":"COLETOR","turno":1},{"pis":"19038204283","matricula":"8726","nome":"JOSIMAR CRISPIM DA SILVA","cargo":"COLETOR","turno":3},{"pis":"12721174179","matricula":"8694","nome":"LAERTE ALESSANDRO FERREIRA","cargo":"COLETOR","turno":3},{"pis":"12737041181","matricula":"7890","nome":"LEANDRO DA SILVA","cargo":"COLETOR","turno":0},{"pis":"16353345047","matricula":"8038","nome":"LEONARDO LUIZ DA SILVA","cargo":"COLETOR","turno":2},{"pis":"12482027227","matricula":"7896","nome":"LINCOLN ROGERIO DA SILVA","cargo":"COLETOR","turno":1},{"pis":"12363771186","matricula":"5934","nome":"LUCIANO JOSE DE SALES","cargo":"COLETOR","turno":3},{"pis":"12686446155","matricula":"6383","nome":"LUCIMARA APARECIDA DE MELO","cargo":"VARREDOR","turno":0},{"pis":"16522724325","matricula":"8710","nome":"LUIS CARLOS DE ALMEIDA DA SILVA","cargo":"COLETOR","turno":3},{"pis":"16355406728","matricula":"8404","nome":"LUIZ FERNANDO RIBEIRO SOARES","cargo":"COLETOR","turno":1},{"pis":"12799123181","matricula":"6871","nome":"LUIZ HENRIQUE FERREIRA DE BARROS","cargo":"COLETOR","turno":2},{"pis":"10837460449","matricula":"7006","nome":"LUIZ PEREIRA PASCHOAL","cargo":"CONTROLADOR DE ACESSO/PORTEIRO","turno":0},{"pis":"12745743386","matricula":"7879","nome":"MARCELO DIAS DOS SANTOS","cargo":"COLETOR","turno":1},{"pis":"12606558164","matricula":"8233","nome":"MARCIA PAZ DE LIMA","cargo":"COLETOR","turno":3},{"pis":"16400987615","matricula":"8274","nome":"MARCIO SANTOS RODRIGUES","cargo":"COLETOR","turno":1},{"pis":"19018955291","matricula":"8082","nome":"MARCOS DE JESUS GARCIA","cargo":"COLETOR","turno":3},{"pis":"12632106178","matricula":"5824","nome":"MARIO LUCAS GONCALVES","cargo":"COLETOR","turno":3},{"pis":"20738096606","matricula":"8695","nome":"MARLON AUGUSTO DOS SANTOS DA SILVA","cargo":"COLETOR","turno":1},{"pis":"16363621535","matricula":"8327","nome":"MAYCON DANILO DOS SANTOS VIEIRA","cargo":"COLETOR","turno":0},{"pis":"12105510541","matricula":"8081","nome":"MILTON LEITE DA SILVA","cargo":"MOTORISTA TRATOR","turno":2},{"pis":"20212550726","matricula":"8594","nome":"MURILO ANDRE SOUZA DE MELLO","cargo":"COLETOR","turno":3},{"pis":"12005552684","matricula":"6291","nome":"OLIMPIO VIEIRA BONFIM JUNIOR","cargo":"OPERADOR DE MAQUINAS II","turno":0},{"pis":"12275088867","matricula":"5984","nome":"OSVALDO DOS SANTOS","cargo":"COLETOR","turno":1},{"pis":"13005154776","matricula":"8222","nome":"PAULO CESAR DOS SANTOS","cargo":"COLETOR","turno":2},{"pis":"16564935405","matricula":"8489","nome":"RAFAEL BUENO RAMIRES","cargo":"COLETOR","turno":3},{"pis":"19008743291","matricula":"6388","nome":"REGINALDO DOS SANTOS","cargo":"COLETOR","turno":1},{"pis":"12455031839","matricula":"8231","nome":"REGINALDO FERREIRA DOS SANTOS","cargo":"MOTORISTA","turno":0},{"pis":"16576699078","matricula":"8252","nome":"REINALDO JUNIOR DE OLIVEIRA BARRETO","cargo":"COLETOR","turno":1},{"pis":"16576706430","matricula":"8357","nome":"RENATO MARTINS BARRETO","cargo":"COLETOR","turno":3},{"pis":"16532717003","matricula":"8408","nome":"RICARDO DO NASCIMENTO NOGUEIRA","cargo":"COLETOR","turno":1},{"pis":"12854587172","matricula":"7434","nome":"ROBERTO SANTANA DA SILVA","cargo":"COLETOR","turno":3},{"pis":"12722333165","matricula":"7068","nome":"RODRIGO APOLINARIO DO NASCIMENTO","cargo":"COLETOR","turno":3},{"pis":"12529404188","matricula":"7792","nome":"RODRIGO SARAIVA MIGUEL","cargo":"COLETOR","turno":2},{"pis":"20367732046","matricula":"7892","nome":"RONALDO DOS SANTOS","cargo":"COLETOR","turno":3},{"pis":"12350648143","matricula":"7188","nome":"RONALDO JOSE DE FREITAS","cargo":"MOTORISTA","turno":0},{"pis":"16561568347","matricula":"7982","nome":"RUBENS NATANAEL RODRIGUES","cargo":"COLETOR","turno":1},{"pis":"12014813940","matricula":"8250","nome":"SEBASTIAO ASSIS DE JESUS COTA","cargo":"MOTORISTA","turno":0},{"pis":"12697804147","matricula":"8449","nome":"SERGIO WESLEY GARCIA BEZERRA","cargo":"COLETOR","turno":1},{"pis":"17053731802","matricula":"5384","nome":"SIDNEI DE MOURA SANTIAGO","cargo":"COLETOR","turno":3},{"pis":"12289429165","matricula":"6419","nome":"SILVIO APARECIDO SASSI","cargo":"COLETOR","turno":3},{"pis":"12837618189","matricula":"8245","nome":"STEVE ORTTEMAIR LOPES","cargo":"COLETOR","turno":1},{"pis":"16576812591","matricula":"8402","nome":"THAINAN FELIPE BATISTA DOS SANTOS","cargo":"COLETOR","turno":2},{"pis":"20792153418","matricula":"8229","nome":"ULISSES MIRANDA GREGORIO","cargo":"ENCARREGADO DE TURMA","turno":0},{"pis":"12936429163","matricula":"8258","nome":"VALDECIR ROGERIO DA SILVA","cargo":"COLETOR","turno":3},{"pis":"12358202381","matricula":"6808","nome":"VALDIVINO CAMARGO DOS SANTOS","cargo":"COLETOR","turno":2},{"pis":"19066033374","matricula":"8399","nome":"VINICIUS OLIVEIRA MENDES DA SILVA","cargo":"COLETOR","turno":2},{"pis":"16528926639","matricula":"8711","nome":"WELLINGTON ALVES DE MORAIS","cargo":"COLETOR","turno":0},{"pis":"16071722366","matricula":"7975","nome":"WELLINGTON JOSE DA SILVA SANTOS","cargo":"COLETOR","turno":1},{"pis":"19023171309","matricula":"7894","nome":"WELLINGTON MENDONCA DE BRITO","cargo":"COLETOR","turno":1},{"pis":"12770945388","matricula":"7758","nome":"WESLEY RODRIGO CARVALHO DE CAMARGO","cargo":"COLETOR","turno":1},{"pis":"16530700219","matricula":"8230","nome":"WILKER DOS SANTOS ROSA","cargo":"COLETOR","turno":2},{"pis":"12965022157","matricula":"8330","nome":"WILLIAM MARIACI MORAES","cargo":"COLETOR","turno":3},{"pis":"12357754909","matricula":"7300","nome":"WILSON CAVALCANTE FILHO","cargo":"MOTORISTA","turno":1},{"pis":"20698528004","matricula":"8366","nome":"YGOR CIPRIANO","cargo":"COLETOR","turno":1}];
+
+// ══════════════════════════════════════════════════════════
+//  INDEXEDDB
+// ══════════════════════════════════════════════════════════
+const DB_NAME='PontoV3', DB_VER=1;
+let db;
+
+function initDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('cadastro')){
+        const s=d.createObjectStore('cadastro',{keyPath:'id',autoIncrement:true});
+        s.createIndex('pis','pis',{unique:true});
+        s.createIndex('turno','turno');
+        s.createIndex('nome','nome');
+      }
+      if(!d.objectStoreNames.contains('registros')){
+        const s=d.createObjectStore('registros',{keyPath:'id',autoIncrement:true});
+        s.createIndex('pis','pis');s.createIndex('turno','turno');
+        s.createIndex('data','data');s.createIndex('chave','chave',{unique:true});
+      }
+      if(!d.objectStoreNames.contains('log')){
+        d.createObjectStore('log',{keyPath:'id',autoIncrement:true});
+      }
+    };
+    req.onsuccess=e=>{db=e.target.result;res(db)};
+    req.onerror=()=>rej(req.error);
+  });
+}
+
+function tx(store,mode='readonly'){return db.transaction(store,mode).objectStore(store)}
+function idbGetAll(store,index,val){
+  return new Promise(res=>{
+    const s=tx(store); let req;
+    if(index&&val!==undefined) req=s.index(index).getAll(val);
+    else req=s.getAll();
+    req.onsuccess=()=>res(req.result||[]);
+    req.onerror=()=>res([]);
+  });
+}
+function idbAdd(store,obj){return new Promise((res,rej)=>{const r=tx(store,'readwrite').add(obj);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function idbPut(store,obj){return new Promise((res,rej)=>{const r=tx(store,'readwrite').put(obj);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function idbDel(store,id){return new Promise(res=>{tx(store,'readwrite').delete(id).onsuccess=()=>res()})}
+function idbClear(store){return new Promise(res=>{tx(store,'readwrite').clear().onsuccess=()=>res()})}
+function idbCount(store){return new Promise(res=>{const r=tx(store).count();r.onsuccess=()=>res(r.result)})}
+
+async function seedIfEmpty(){
+  const n=await idbCount('cadastro');
+  if(n===0){
+    const s=db.transaction('cadastro','readwrite').objectStore('cadastro');
+    for(const f of SEED) s.add({...f,ativo:1,criado_em:new Date().toISOString()});
+    await new Promise(res=>{s.transaction.oncomplete=res});
+    toast('✅ 126 funcionários carregados no banco!','s');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════
+const METAS={
+  dashboard: {t:'Dashboard',s:'Visão geral do sistema'},
+  instrucoes:{t:'Instruções de Uso',s:'Guia completo — AFD, espelho, cadastro, deploy'},
+  importar:  {t:'Importar TXT (AFD)',s:'Portaria 1510 — salva no IndexedDB'},
+  registros: {t:'Registros de Ponto',s:'Todos os registros importados'},
+  cadastro:  {t:'Cadastro Geral',s:'Todos os funcionários — adicionar, editar, remover'},
+  cad1:      {t:'CadastroTurno(1)',s:'Funcionários do Turno 1'},
+  cad2:      {t:'CadastroTurno(2)',s:'Funcionários do Turno 2'},
+  cad3:      {t:'CadastroTurno(3)',s:'Funcionários do Turno 3'},
+  relatorio: {t:'Relatório por Turno',s:'Gera Relat+Resumo T1/T2/T3 em XLSX'},
+  espelho:   {t:'Espelho por Turno',s:'Espelho individual com batidas por dia'},
+  log:       {t:'Log de Erros',s:'Erros de importação e validação'},
+};
+
+document.querySelectorAll('.ni').forEach(n=>n.addEventListener('click',()=>go(n.dataset.p)));
+
+function go(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  const pg=document.getElementById('pg-'+id);
+  if(pg) pg.classList.add('on');
+  document.querySelectorAll('.ni').forEach(n=>{if(n.dataset.p===id)n.classList.add('on')});
+  const m=METAS[id]||{};
+  document.getElementById('ttit').textContent=m.t||'';
+  document.getElementById('tsub').textContent=m.s||'';
+  if(id==='dashboard') loadDash();
+  if(id==='registros') regRender(1);
+  if(id==='log') logRender();
+  if(id==='relatorio') relStatus();
+  if(id.startsWith('cad')) cadLoad(id);
+}
+
+// ══════════════════════════════════════════════════════════
+//  STATUS PILLS
+// ══════════════════════════════════════════════════════════
+async function refreshStatus(){
+  const [nc,nr,ne]=await Promise.all([idbCount('cadastro'),idbCount('registros'),idbCount('log')]);
+  const all=await idbGetAll('cadastro');
+  const regs=await idbGetAll('registros');
+  const ft={1:all.filter(f=>f.turno===1).length,2:all.filter(f=>f.turno===2).length,3:all.filter(f=>f.turno===3).length};
+  const bt={1:regs.filter(r=>r.turno===1).length,2:regs.filter(r=>r.turno===2).length,3:regs.filter(r=>r.turno===3).length};
+  document.getElementById('pc').textContent=nc;
+  document.getElementById('pr').textContent=nr;
+  document.getElementById('pe').textContent=ne;
+  document.getElementById('k-cad').textContent=nc;
+  document.getElementById('k-reg').textContent=nr;
+  document.getElementById('k-err').textContent=ne;
+  [1,2,3].forEach(t=>{
+    document.getElementById('kt'+t).textContent=ft[t];
+    document.getElementById('kt'+t+'s').textContent=`${ft[t]} funcionários · ${bt[t]} batidas`;
+  });
+  return {ft,bt,regs};
+}
+
+// ══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════
+let chDia=null,chDnt=null;
+async function loadDash(){
+  const {bt,regs}=await refreshStatus();
+  // Batidas por dia
+  const diasMap={};
+  regs.forEach(r=>{diasMap[r.data]=(diasMap[r.data]||{t1:0,t2:0,t3:0});diasMap[r.data]['t'+r.turno]=(diasMap[r.data]['t'+r.turno]||0)+1});
+  const dias=Object.keys(diasMap).sort((a,b)=>{const pa=a.split('/'),pb=b.split('/');return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0])});
+  if(chDia) chDia.destroy();
+  chDia=new Chart(document.getElementById('ch-dia'),{type:'bar',data:{labels:dias.map(d=>d.substring(0,5)),datasets:[
+    {label:'T1',data:dias.map(d=>diasMap[d].t1||0),backgroundColor:'rgba(76,123,244,.85)',borderRadius:3},
+    {label:'T2',data:dias.map(d=>diasMap[d].t2||0),backgroundColor:'rgba(34,197,94,.85)',borderRadius:3},
+    {label:'T3',data:dias.map(d=>diasMap[d].t3||0),backgroundColor:'rgba(239,68,68,.85)',borderRadius:3},
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#9AA3CC',font:{size:10}}}},
+    scales:{x:{grid:{color:'rgba(42,47,78,.4)'},ticks:{color:'#5A6380',font:{size:9}}},
+            y:{grid:{color:'rgba(42,47,78,.4)'},ticks:{color:'#5A6380',font:{size:9}}}}}});
+  if(chDnt) chDnt.destroy();
+  chDnt=new Chart(document.getElementById('ch-dnt'),{type:'doughnut',data:{
+    labels:[`T1 (${bt[1]})`,`T2 (${bt[2]})`,`T3 (${bt[3]})`],
+    datasets:[{data:[bt[1]||1,bt[2]||1,bt[3]||1],backgroundColor:['rgba(76,123,244,.85)','rgba(34,197,94,.85)','rgba(239,68,68,.85)'],borderColor:'#131626',borderWidth:3,hoverOffset:6}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+    plugins:{legend:{position:'bottom',labels:{color:'#9AA3CC',font:{size:11},padding:10}}}}});
+}
+
+// ══════════════════════════════════════════════════════════
+//  IMPORTAR AFD
+// ══════════════════════════════════════════════════════════
+const dzEl=document.getElementById('dz'),fiEl=document.getElementById('fi');
+let selF=[];
+dzEl.addEventListener('dragover',e=>{e.preventDefault();dzEl.classList.add('hv')});
+dzEl.addEventListener('dragleave',()=>dzEl.classList.remove('hv'));
+dzEl.addEventListener('drop',e=>{e.preventDefault();dzEl.classList.remove('hv');addFiles([...e.dataTransfer.files].filter(f=>f.name.endsWith('.txt')))});
+fiEl.addEventListener('change',()=>{addFiles([...fiEl.files]);fiEl.value=''});
+function addFiles(fs){fs.forEach(f=>{if(!selF.find(x=>x.name===f.name&&x.size===f.size))selF.push(f)});renderFL();setStep(1);document.getElementById('ir').style.display='none'}
+function renderFL(){document.getElementById('flist').innerHTML=selF.map((f,i)=>`<div class="fi"><span>📄</span><span class="fn">${f.name}</span><span class="fs">${(f.size/1024).toFixed(1)} KB</span><span class="fx" onclick="selF.splice(${i},1);renderFL()">✕</span></div>`).join('')}
+function setStep(n){[1,2,3].forEach(s=>{const e=document.getElementById('st'+s);e.className='step'+(s<n?' done':s===n?' act':'');e.querySelector('.sn').textContent=s})}
+
+async function parseAFD(txt,nome){
+  // Carregar cadastro como dict PIS->func
+  const cadArr=await idbGetAll('cadastro');
+  const cad={};cadArr.forEach(f=>cad[f.pis]=f);
+  // Carregar chaves existentes para dedup
+  const existentes=await idbGetAll('registros');
+  const chaves=new Set(existentes.map(r=>r.chave));
+  let imp=0,dup=0,sem=0,inv=0,errs=[];
+  const linhas=txt.split('\n');
+  for(let i=0;i<linhas.length;i++){
+    const ln=linhas[i].trim();
+    if(ln.length<34){if(ln.length>0)inv++;continue}
+    if(ln[9]!=='3'){inv++;continue}
+    const nsr=ln.substring(0,9).trim();
+    const dd=ln.substring(10,12),mm=ln.substring(12,14),aaaa=ln.substring(14,18);
+    const hh=ln.substring(18,20),mn=ln.substring(20,22);
+    const pis=ln.substring(23,34).trim();
+    if(!/^\d+$/.test(dd+mm+aaaa+hh+mn)){inv++;continue}
+    if(+dd<1||+dd>31||+mm<1||+mm>12||+aaaa<2000||+aaaa>2099){inv++;continue}
+    if(+hh>23||+mn>59){inv++;continue}
+    if(pis.length!==11||!/^\d{11}$/.test(pis)){inv++;continue}
+    const data=`${dd}/${mm}/${aaaa}`,hora=`${hh}:${mn}`;
+    const chave=`${pis}|${data}|${hora}|${nsr}`;
+    if(chaves.has(chave)){dup++;continue}
+    chaves.add(chave);
+    const f=cad[pis];
+    if(!f){sem++;errs.push({ts:new Date().toLocaleString('pt-BR'),modulo:'ImportarAFD',linha_txt:i+1,descricao:`PIS sem cadastro: ${pis} | linha ${i+1}`})}
+    const obj={pis,matricula:f?.matricula||'',nome:f?.nome||'',cargo:f?.cargo||'',turno:f?.turno||0,data,hora,num_reg:nsr,chave,arquivo:nome,importado_em:new Date().toISOString()};
+    try{await idbAdd('registros',obj);imp++}catch(e){dup++}
+  }
+  for(const e of errs) try{await idbAdd('log',e)}catch(_){}
+  return{imp,dup,sem,inv};
+}
+
+async function importar(){
+  if(!selF.length){toast('Selecione ao menos um arquivo TXT','w');return}
+  const btn=document.getElementById('btn-imp');
+  btn.disabled=true;btn.innerHTML='<div class="sp"></div> Importando...';
+  setStep(2);document.getElementById('ip').style.display='block';document.getElementById('ir').style.display='none';
+  let prog=0;const itv=setInterval(()=>{prog=Math.min(prog+5,85);document.getElementById('pf').style.width=prog+'%'},180);
+  let totImp=0,totDup=0,totSem=0,totInv=0,dets=[];
+  for(const f of selF){
+    document.getElementById('ptxt').textContent=`Processando: ${f.name}...`;
+    const txt=await f.text();
+    const r=await parseAFD(txt,f.name);
+    totImp+=r.imp;totDup+=r.dup;totSem+=r.sem;totInv+=r.inv;
+    dets.push(`${f.name}: ${r.imp} importados`);
+  }
+  clearInterval(itv);document.getElementById('pf').style.width='100%';
+  setTimeout(()=>{
+    document.getElementById('ip').style.display='none';
+    ['ri1','ri2','ri3','ri4'].forEach((id,i)=>document.getElementById(id).textContent=[totImp,totDup,totSem,totInv][i]);
+    document.getElementById('ri-det').textContent=dets.join(' · ');
+    document.getElementById('ir').style.display='block';
+    setStep(3);selF=[];renderFL();refreshStatus();
+    toast(`✅ ${totImp} registros importados!`,'s');
+  },300);
+  btn.disabled=false;btn.innerHTML='📥 Importar Selecionados';
+}
+
+async function limparRegistros(){
+  closeMo('m-lim');
+  await idbClear('registros');await idbClear('log');
+  refreshStatus();setStep(1);document.getElementById('ir').style.display='none';
+  toast('Registros limpos com sucesso','i');
+}
+
+// ══════════════════════════════════════════════════════════
+//  REGISTROS TABLE
+// ══════════════════════════════════════════════════════════
+let reg_pg=1;const REG_SZ=60;
+const TB={1:'bt1',2:'bt2',3:'bt3',0:'bt0'},TL={1:'T1',2:'T2',3:'T3',0:'—'};
+
+async function regRender(pg){
+  reg_pg=pg||1;
+  const busca=document.getElementById('rb').value.toLowerCase();
+  const turno=document.getElementById('rd-ord')?document.getElementById('rt').value:'';
+  const ord=document.getElementById('rd-ord')?document.getElementById('rd-ord').value:'nome';
+  let all=await idbGetAll('registros');
+  if(turno) all=all.filter(r=>String(r.turno)===turno);
+  if(busca) all=all.filter(r=>r.nome.toLowerCase().includes(busca)||r.pis.includes(busca));
+  all.sort((a,b)=>{
+    if(ord==='data'){const ka=a.data.split('/').reverse().join(''),kb=b.data.split('/').reverse().join('');return ka>kb?1:-1}
+    if(ord==='hora') return a.hora>b.hora?1:-1;
+    return a.nome.localeCompare(b.nome);
+  });
+  const total=all.length;const maxPg=Math.max(1,Math.ceil(total/REG_SZ));
+  reg_pg=Math.min(reg_pg,maxPg);
+  const slice=all.slice((reg_pg-1)*REG_SZ,reg_pg*REG_SZ);
+  document.getElementById('reg-body').innerHTML=slice.length?slice.map(r=>`
+    <tr><td><span class="badge ${TB[r.turno]||'bt0'}">${TL[r.turno]||'—'}</span></td>
+    <td class="mono">${r.matricula||'—'}</td>
+    <td style="font-weight:500;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.nome||'—'}</td>
+    <td style="color:var(--tx3);font-size:11px">${r.cargo||'—'}</td>
+    <td class="mono">${r.pis}</td><td class="mono">${r.data}</td><td class="mono">${r.hora}</td>
+    <td style="color:var(--tx3);font-size:10.5px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.arquivo||''}</td>
+    </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--tx3)">Nenhum registro</td></tr>`;
+  document.getElementById('reg-sub').textContent=`${total} registros no IndexedDB`;
+  document.getElementById('reg-pag').textContent=`${total} registros · pág. ${reg_pg} de ${maxPg}`;
+  document.getElementById('rp-').disabled=reg_pg<=1;
+  document.getElementById('rp+').disabled=reg_pg>=maxPg;
+}
+
+// ══════════════════════════════════════════════════════════
+//  CADASTRO PAGES (dinâmicas)
+// ══════════════════════════════════════════════════════════
+const CAD_PG={cadastro:1,cad1:1,cad2:1,cad3:1};const CAD_SZ=60;
+let edit_id=null,del_id=null;
+
+function cadLoad(pgId){
+  const tMap={cadastro:null,cad1:1,cad2:2,cad3:3};
+  const t=tMap[pgId];
+  const tc=t?['','var(--t1)','var(--t2)','var(--t3)'][t]:'var(--ac)';
+  const el=document.getElementById('pg-'+pgId);
+  el.innerHTML=`
+    <div class="sh">
+      <div><div class="sh-t" style="color:${tc}">${t?`CadastroTurno(${t})`:'Cadastro Geral'}</div>
+      <div class="sh-s">${t?`Funcionários do Turno ${t}`:'Todos os funcionários cadastrados'}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn bgh bsm" onclick="exportCad()">⬇️ Exportar XLSX</button>
+        <button class="btn bgh bsm" onclick="openMo('m-reset')">🔄 Resetar DB</button>
+        <button class="btn bac bsm" onclick="abrirNovoFunc(${t||0})">➕ Novo Funcionário</button>
+      </div>
+    </div>
+    <div class="fb">
+      <input id="cb-${pgId}" placeholder="🔍 Buscar nome, PIS ou matrícula..." oninput="cadRender('${pgId}',${t==null?'null':t},1)" style="width:240px">
+      <select id="ct-${pgId}" onchange="cadRender('${pgId}',${t==null?'null':t},1)" style="width:130px;${t?'display:none':''}">
+        <option value="">Todos Turnos</option><option value="0">Sem turno</option>
+        <option value="1">Turno 1</option><option value="2">Turno 2</option><option value="3">Turno 3</option>
+      </select>
+      <span class="pill pb" id="cc-${pgId}"></span>
+    </div>
+    <div class="tw" style="max-height:calc(100vh - 270px)">
+      <table><thead><tr>
+        <th>Turno</th><th>Matrícula</th><th>Nome</th><th>Cargo</th><th>PIS</th><th>Cadastrado em</th><th style="width:130px">Ações</th>
+      </tr></thead><tbody id="cbt-${pgId}"></tbody></table>
+    </div>
+    <div class="pag">
+      <div class="pag-i" id="cp-${pgId}"></div>
+      <div class="pag-b">
+        <button class="btn bgh bsm" id="cpm-${pgId}" onclick="CAD_PG['${pgId}']--;cadRender('${pgId}',${t==null?'null':t},CAD_PG['${pgId}'])">← Ant.</button>
+        <button class="btn bgh bsm" id="cpp-${pgId}" onclick="CAD_PG['${pgId}']++;cadRender('${pgId}',${t==null?'null':t},CAD_PG['${pgId}'])">Próx. →</button>
+      </div>
+    </div>`;
+  // Use setTimeout to ensure DOM is updated before reading elements
+  setTimeout(()=>cadRender(pgId,t,1),0);
+}
+
+async function cadRender(pgId,turno,pg){
+  try{
+    CAD_PG[pgId]=pg||1;
+    const buscaEl=document.getElementById('cb-'+pgId);
+    const busca=buscaEl?buscaEl.value.toLowerCase():'';
+    const filtEl=document.getElementById('ct-'+pgId);
+    // turno=null means show all; turno=0/1/2/3 means filter by that value
+    const filtT=(turno!==null&&turno!==undefined)?turno:(filtEl&&filtEl.value!==''?parseInt(filtEl.value):null);
+    let all=await idbGetAll('cadastro');
+    if(filtT!==null&&filtT!==undefined) all=all.filter(f=>f.turno===filtT);
+    if(busca) all=all.filter(f=>(f.nome||'').toLowerCase().includes(busca)||(f.pis||'').includes(busca)||(f.matricula||'').includes(busca));
+    all.sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    const total=all.length;
+    const maxPg=Math.max(1,Math.ceil(total/CAD_SZ));
+    CAD_PG[pgId]=Math.min(CAD_PG[pgId],maxPg);
+    const slice=all.slice((CAD_PG[pgId]-1)*CAD_SZ,CAD_PG[pgId]*CAD_SZ);
+    const tbody=document.getElementById('cbt-'+pgId);
+    if(!tbody){console.warn('tbody not found: cb-'+pgId);return;}
+    // Build HTML safely — avoid nested template literals that break on special chars
+    function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    const tc=r=>({1:'bt1',2:'bt2',3:'bt3',0:'bt0'}[r.turno]||'bt0');
+    const tl=r=>({1:'T1',2:'T2',3:'T3',0:'—'}[r.turno]||'—');
+    if(!slice.length){
+      tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--tx3)">Nenhum funcionário encontrado</td></tr>';
+    } else {
+      const rows=slice.map(r=>[
+        '<tr>',
+        '<td><span class="badge ',tc(r),'">',tl(r),'</span></td>',
+        '<td class="mono">',esc(r.matricula||'—'),'</td>',
+        '<td style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">',esc(r.nome),'</td>',
+        '<td style="color:var(--tx3);font-size:11px">',esc(r.cargo||'—'),'</td>',
+        '<td class="mono">',esc(r.pis),'</td>',
+        '<td style="color:var(--tx3);font-size:10.5px">',esc((r.criado_em||'').substring(0,10)),'</td>',
+        '<td style="display:flex;gap:5px">',
+        '<button class="btn bgh bsm" onclick="editarFunc(',r.id,')">✏️</button>',
+        '<button class="btn brd bsm" onclick="abrirDel(',r.id,')">🗑️</button>',
+        '</td></tr>'
+      ].join(''));
+      tbody.innerHTML=rows.join('');
+    }
+    const cc=document.getElementById('cc-'+pgId);if(cc)cc.textContent=total+' funcionários';
+    const cp=document.getElementById('cp-'+pgId);if(cp)cp.textContent=total+' · pág. '+CAD_PG[pgId]+' de '+maxPg;
+    const cpm=document.getElementById('cpm-'+pgId);if(cpm)cpm.disabled=CAD_PG[pgId]<=1;
+    const cpp=document.getElementById('cpp-'+pgId);if(cpp)cpp.disabled=CAD_PG[pgId]>=maxPg;
+  }catch(e){console.error('cadRender error:',e);toast('Erro ao carregar cadastro: '+e.message,'e');}
+}
+
+function abrirNovoFunc(t){
+  edit_id=null;
+  document.getElementById('mf-tit').textContent='➕ Novo Funcionário';
+  ['pis','mat','nome','cargo'].forEach(k=>{const el=document.getElementById('mf-'+k);if(el)el.value=''});
+  document.getElementById('mf-turno').value=String(t||0);
+  document.getElementById('mf-pis').disabled=false;
+  openMo('m-func');
+}
+
+async function editarFunc(id){
+  const all=await idbGetAll('cadastro');const r=all.find(x=>x.id===id);if(!r)return;
+  edit_id=id;
+  document.getElementById('mf-tit').textContent='✏️ Editar Funcionário';
+  document.getElementById('mf-pis').value=r.pis;document.getElementById('mf-pis').disabled=true;
+  document.getElementById('mf-mat').value=r.matricula||'';
+  document.getElementById('mf-nome').value=r.nome;
+  document.getElementById('mf-cargo').value=r.cargo||'';
+  document.getElementById('mf-turno').value=String(r.turno||0);
+  openMo('m-func');
+}
+
+async function salvarFunc(){
+  const pis=document.getElementById('mf-pis').value.trim();
+  const nome=document.getElementById('mf-nome').value.trim();
+  if(!nome){toast('Nome é obrigatório','w');return}
+  if(!edit_id&&(pis.length!==11||!/^\d{11}$/.test(pis))){toast('PIS deve ter 11 dígitos numéricos','w');return}
+  const obj={pis,matricula:document.getElementById('mf-mat').value.trim(),nome,cargo:document.getElementById('mf-cargo').value.trim(),turno:parseInt(document.getElementById('mf-turno').value),ativo:1,criado_em:new Date().toISOString()};
+  try{
+    if(edit_id){obj.id=edit_id;await idbPut('cadastro',obj);}
+    else{await idbAdd('cadastro',obj);}
+    closeMo('m-func');toast(`✅ Funcionário ${edit_id?'atualizado':'adicionado'}!`,'s');
+    refreshStatus();
+    ['cadastro','cad1','cad2','cad3'].forEach(p=>{
+    const el=document.getElementById('pg-'+p);
+    if(el&&el.querySelector('tbody')){
+      const tmap={cadastro:null,cad1:1,cad2:2,cad3:3};
+      cadRender(p,tmap[p],CAD_PG[p]||1);
+    }
+  });
+  }catch(e){toast('Erro: PIS já cadastrado ou dados inválidos','e')}
+}
+
+async function abrirDel(id){
+  del_id=id;
+  const all=await idbGetAll('cadastro');
+  const r=all.find(x=>x.id===id);
+  document.getElementById('del-nome').textContent=r?r.nome:'ID '+id;
+  openMo('m-del');
+}
+async function confirmarDel(){
+  closeMo('m-del');await idbDel('cadastro',del_id);
+  toast('Funcionário removido','i');refreshStatus();
+  ['cadastro','cad1','cad2','cad3'].forEach(p=>{
+    const el=document.getElementById('pg-'+p);
+    if(el&&el.querySelector('tbody')){
+      const tmap={cadastro:null,cad1:1,cad2:2,cad3:3};
+      cadRender(p,tmap[p],CAD_PG[p]||1);
+    }
+  });
+}
+
+async function resetDB(){
+  closeMo('m-reset');
+  await idbClear('cadastro');await idbClear('registros');await idbClear('log');
+  await seedIfEmpty();
+  refreshStatus();toast('🔄 Banco resetado com 126 funcionários originais','i');
+  ['cadastro','cad1','cad2','cad3'].forEach(p=>{
+    const el=document.getElementById('pg-'+p);
+    if(el&&el.querySelector('tbody')){
+      const tmap={cadastro:null,cad1:1,cad2:2,cad3:3};
+      cadRender(p,tmap[p],1);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  RELATÓRIO — gera XLSX com SheetJS
+// ══════════════════════════════════════════════════════════
+async function relStatus(){
+  const regs=await idbGetAll('registros');
+  const bt={1:0,2:0,3:0};regs.forEach(r=>{if(r.turno)bt[r.turno]++});
+  document.getElementById('rs-tot').textContent=regs.length+' registros';
+  [1,2,3].forEach(t=>document.getElementById('rs-t'+t).textContent=bt[t]+' batidas');
+}
+
+async function gerarRel(){
+  const btn=document.getElementById('btn-rel');
+  btn.disabled=true;btn.innerHTML='<div class="sp"></div> Gerando...';
+  try{
+    const regs=await idbGetAll('registros');
+    if(!regs.length){toast('Nenhum registro importado','w');return}
+    const wb=XLSX.utils.book_new();
+    const CORS={1:'FF0070C0',2:'FF009900',3:'FFC00000'};
+    const STL={
+      hdr:(cor)=>({fill:{fgColor:{rgb:cor}},font:{bold:true,color:{rgb:'FFFFFFFF'},sz:11},alignment:{horizontal:'center',vertical:'center'}}),
+      thdr:(cor)=>({fill:{fgColor:{rgb:cor}},font:{bold:true,color:{rgb:'FFFFFFFF'},sz:10},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}}}),
+      alt1:()=>({fill:{fgColor:{rgb:'FFF2F2F2'}},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}}}),
+      norm:()=>({border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}}}),
+      verde:()=>({fill:{fgColor:{rgb:'FFC6E0B4'}},font:{bold:true},alignment:{horizontal:'center'},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}}}),
+      total:(cor)=>({fill:{fgColor:{rgb:cor}},font:{bold:true,color:{rgb:'FFFFFFFF'}},alignment:{horizontal:'center'},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}}}),
+    };
+    function sc(ws,r,c,v,s){const a=XLSX.utils.encode_cell({r,c});ws[a]={v,t:typeof v==='number'?'n':'s',s};}
+    for(const t of [1,2,3]){
+      const dados=regs.filter(r=>r.turno===t).sort((a,b)=>a.nome.localeCompare(b.nome)||(a.data>b.data?1:-1));
+      if(!dados.length)continue;
+      const cor=CORS[t];
+      // ── RELAT ──
+      const wsR=XLSX.utils.aoa_to_sheet([]);
+      wsR['!ref']='A1:G'+(4+dados.length);
+      // Linha 1 — título
+      sc(wsR,0,0,`RELATORIO DETALHADO DE BATIDAS DE PONTO - TURNO ${t}`,STL.hdr(cor));
+      wsR['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}},{s:{r:2,c:0},e:{r:2,c:6}}];
+      sc(wsR,1,0,`Gerado em: ${new Date().toLocaleString('pt-BR')}`,{font:{italic:true,sz:9}});
+      sc(wsR,2,0,`Total de registros: ${dados.length}`,{font:{bold:true,sz:9}});
+      // Linha 4 — cabeçalhos
+      ['Matricula','Nome','Cargo','PIS','Data','Hora','Qtd. Batidas'].forEach((h,c)=>sc(wsR,3,c,h,STL.thdr(cor)));
+      // Dados
+      dados.forEach((r,i)=>{
+        const s=i%2===0?STL.alt1():STL.norm();
+        [r.matricula,r.nome,r.cargo,r.pis,r.data,r.hora,1].forEach((v,c)=>sc(wsR,4+i,c,v,{...s,alignment:{horizontal:c===1||c===2?'left':'center'}}));
+      });
+      wsR['!cols']=[{wch:12},{wch:36},{wch:22},{wch:14},{wch:13},{wch:8},{wch:13}];
+      wsR['!rows']=[{hpt:22},{},{},{hpt:20}];
+      wsR['!autofilter']={ref:'A4:G'+(4+dados.length)};
+      XLSX.utils.book_append_sheet(wb,wsR,`Relat T${t}`);
+      // ── RESUMO ──
+      const res={};
+      dados.forEach(r=>{if(!res[r.pis])res[r.pis]={matricula:r.matricula,nome:r.nome,cargo:r.cargo,pis:r.pis,total:0};res[r.pis].total++});
+      const sr=Object.values(res).sort((a,b)=>a.nome.localeCompare(b.nome));
+      const tot=sr.reduce((s,r)=>s+r.total,0);
+      const wsS=XLSX.utils.aoa_to_sheet([]);
+      wsS['!ref']='A1:E'+(4+sr.length);
+      wsS['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
+      sc(wsS,0,0,`TOTAL DE BATIDAS POR FUNCIONARIO - TURNO ${t}`,STL.hdr(cor));
+      sc(wsS,1,0,`Gerado em: ${new Date().toLocaleString('pt-BR')}`,{font:{italic:true,sz:9}});
+      ['Matricula','Nome','Cargo','PIS','Total Batidas'].forEach((h,c)=>sc(wsS,2,c,h,STL.thdr(cor)));
+      sr.forEach((r,i)=>{
+        const s=i%2===0?STL.alt1():STL.norm();
+        [r.matricula,r.nome,r.cargo,r.pis].forEach((v,c)=>sc(wsS,3+i,c,v,{...s,alignment:{horizontal:c===1||c===2?'left':'center'}}));
+        sc(wsS,3+i,4,r.total,STL.verde());
+      });
+      // Total geral
+      const tr=3+sr.length;
+      wsS['!merges'].push({s:{r:tr,c:0},e:{r:tr,c:3}});
+      sc(wsS,tr,0,'TOTAL GERAL',STL.total(cor));
+      sc(wsS,tr,4,tot,STL.total(cor));
+      wsS['!cols']=[{wch:12},{wch:36},{wch:22},{wch:14},{wch:15}];
+      wsS['!rows']=[{hpt:22},{},{hpt:20}];
+      wsS['!autofilter']={ref:'A3:E'+(3+sr.length)};
+      XLSX.utils.book_append_sheet(wb,wsS,`Resumo T${t}`);
+    }
+    const ts=new Date().toISOString().replace(/[:.]/g,'-').substring(0,16);
+    XLSX.writeFile(wb,`RelatorioTurno_${ts}.xlsx`,{cellStyles:true});
+    toast('✅ Relatório gerado e baixado!','s');
+  }catch(e){toast('Erro: '+e.message,'e');console.error(e)}
+  btn.disabled=false;btn.innerHTML='📥 Gerar e Baixar XLSX';
+}
+
+// ══════════════════════════════════════════════════════════
+//  ESPELHO — gera XLSX com SheetJS
+// ══════════════════════════════════════════════════════════
+const DIAS=['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
+function sortBats(bats){return [...bats].sort((a,b)=>{const ma=batMin(a),mb=batMin(b);return ma-mb})}
+function batMin(h){if(!h)return 9999;const hh=+h.substring(0,2),mm=+h.substring(3,5);return hh===0?1440+mm:hh*60+mm}
+function calcMin(bats){
+  let t=0;for(let i=0;i<bats.length-1;i+=2){
+    const h1=+bats[i].substring(0,2),m1=+bats[i].substring(3,5);
+    const h2=+bats[i+1].substring(0,2),m2=+bats[i+1].substring(3,5);
+    let a=h1*60+m1,b=h2*60+m2;if(h2===0)b+=1440;if(b>a)t+=b-a;
+  }return t;
+}
+function mm2hm(m){return`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
+function sortDatas(d){return [...d].sort((a,b)=>{const pa=a.split('/'),pb=b.split('/');return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0])})}
+function diaSem(ds){try{const p=ds.split('/');return DIAS[new Date(+p[2],+p[1]-1,+p[0]).getDay()]}catch{return'---'}}
+
+async function gerarEsp(){
+  const turnos=[...document.querySelectorAll('.tc.sel')].map(c=>+c.dataset.t);
+  if(!turnos.length){toast('Selecione ao menos um turno','w');return}
+  const btn=document.getElementById('btn-esp');
+  btn.disabled=true;btn.innerHTML='<div class="sp"></div> Gerando...';
+  try{
+    const regs=await idbGetAll('registros');
+    if(!regs.length){toast('Nenhum registro importado','w');return}
+    const wb=XLSX.utils.book_new();
+
+    // ── Paleta de cores AARRGGBB ──────────────────────────────────────
+    const C={
+      FUNC_NOME:'FF1F497D', FUNC_INFO:'FFDCE6F7', CAB_DIAS:'FFBDD7EE',
+      TOTAL_H:'FFC6E0B4',  ATENCAO:'FFFFB300',   SABADO:'FFFFF4CC',
+      DOMINGO:'FFFFCDD2',  ZEBRA:'FFF2F2F2',      BRANCO:'FFFFFFFF',
+      TOTAL_PER:'FF00B050',SALDO_BG:'FFFFC800',   EXPEDI:'FFFFFFDC',
+      HEADER1:'FF1F497D',  HEADER2:'FFDCE6F7',    AVISO:'FFFFF3CC',
+      SEP:'FF002060',      SALDO_NEG:'FFFFF3CC',  SALDO_POS:'FFC6EFCE',
+    };
+    const brd=()=>({top:{style:'thin',color:{rgb:'FFB0B0B0'}},bottom:{style:'thin',color:{rgb:'FFB0B0B0'}},left:{style:'thin',color:{rgb:'FFB0B0B0'}},right:{style:'thin',color:{rgb:'FFB0B0B0'}}});
+
+    // ── Gravar célula com valor ──────────────────────────────────────
+    function scv(ws,r,c,v,s,numFmt){
+      const a=XLSX.utils.encode_cell({r,c});
+      const isNum=(typeof v==='number');
+      const cell={v:v??'',t:isNum?'n':'s',s:s||{}};
+      if(numFmt) cell.z=numFmt;
+      ws[a]=cell;
+    }
+    // ── Gravar célula com FÓRMULA ────────────────────────────────────
+    function scf(ws,r,c,formula,s,numFmt){
+      const a=XLSX.utils.encode_cell({r,c});
+      const cell={f:formula,t:'n',s:s||{}};
+      if(numFmt) cell.z=numFmt;
+      ws[a]=cell;
+    }
+    function sty(fill,fontColor,bold,halign){
+      return{fill:{fgColor:{rgb:fill}},font:{color:{rgb:fontColor||'FF000000'},bold:!!bold,sz:10},alignment:{horizontal:halign||'left',vertical:'center'},border:brd()};
+    }
+
+    // Converte hora texto "HH:MM" para fração decimal do dia (valor Excel)
+    function horaParaFrac(h){
+      if(!h||h==='')return null;
+      // Tratar "24:xx" como turno noturno → guardar fração > 1 para que Excel exiba [h]:mm
+      const partes=h.split(':');
+      const hh=parseInt(partes[0]),mm=parseInt(partes[1]||0);
+      return(hh*60+mm)/1440;
+    }
+
+    for(const t of turnos){
+      const dados=regs.filter(r=>r.turno===t);
+      if(!dados.length)continue;
+      const fi={},bat={};
+      dados.forEach(r=>{
+        if(!fi[r.pis])fi[r.pis]={mat:r.matricula,nome:r.nome,cargo:r.cargo};
+        if(!bat[r.pis])bat[r.pis]={};
+        if(!bat[r.pis][r.data])bat[r.pis][r.data]=[];
+        if(!bat[r.pis][r.data].includes(r.hora))bat[r.pis][r.data].push(r.hora);
+      });
+      const funcs=Object.keys(fi).sort((a,b)=>fi[a].nome.localeCompare(fi[b].nome));
+      const ws=XLSX.utils.aoa_to_sheet([]);
+      ws['!rows']=[];
+      let row=0;
+      const merges=[];
+      const merge=(r,c1,c2)=>merges.push({s:{r,c:c1},e:{r,c:c2}});
+
+      // ── Linha 1 — Título ──────────────────────────────────────────
+      scv(ws,row,0,`ESPELHO DE PONTO - TURMA T${t}`,sty(C.HEADER1,'FFFFFFFF',true,'center'));
+      merge(row,0,12);ws['!rows'][row]={hpt:28};row++;
+      // ── Linha 2 — Info ────────────────────────────────────────────
+      scv(ws,row,0,`Total de Funcionarios: ${funcs.length}   |   Fonte: Relat T${t}   |   Gerado em: ${new Date().toLocaleString('pt-BR').substring(0,16)}`,
+        {fill:{fgColor:{rgb:C.HEADER2}},font:{bold:true,color:{rgb:'FF1F497D'},sz:10},alignment:{horizontal:'center',vertical:'center'}});
+      merge(row,0,12);ws['!rows'][row]={hpt:18};row++;
+      // ── Linha 3 — Separador ───────────────────────────────────────
+      for(let c=0;c<13;c++) scv(ws,row,c,'',{fill:{fgColor:{rgb:C.SEP}}});
+      merge(row,0,12);ws['!rows'][row]={hpt:4};row++;
+      // ── Linha 4 — Aviso ───────────────────────────────────────────
+      scv(ws,row,0,'ATENCAO: Linhas em LARANJA contem batida 00:00 (exibida como 24:00). Col K = Total trabalhado: (P2-P1)+(P4-P3)+(P6-P5)+(P8-P7). Col L = Expediente (manual, ex: 8:48). Col M = Saldo (K-L): verde=positivo, amarelo=negativo.',
+        {fill:{fgColor:{rgb:C.AVISO}},font:{color:{rgb:'FF654300'},sz:8},alignment:{horizontal:'left',vertical:'center',wrapText:true}});
+      merge(row,0,12);ws['!rows'][row]={hpt:40};row++;
+
+      // ── Loop por funcionário ──────────────────────────────────────
+      for(const pis of funcs){
+        const inf=fi[pis];
+        // Separador
+        for(let c=0;c<13;c++) scv(ws,row,c,'',{fill:{fgColor:{rgb:C.SEP}}});
+        merge(row,0,12);ws['!rows'][row]={hpt:4};row++;
+        // Nome
+        scv(ws,row,0,inf.nome,sty(C.FUNC_NOME,'FFFFFFFF',true,'center'));
+        merge(row,0,12);ws['!rows'][row]={hpt:20};row++;
+        // PIS / Matrícula / Cargo
+        const iSty={fill:{fgColor:{rgb:C.FUNC_INFO}},font:{sz:9},alignment:{vertical:'center'},border:brd()};
+        const iStyB={...iSty,font:{...iSty.font,bold:true}};
+        scv(ws,row,0,'PIS:',iStyB); scv(ws,row,1,pis,iSty);
+        scv(ws,row,2,'Matricula:',iStyB); scv(ws,row,3,inf.mat,iSty);
+        scv(ws,row,4,'Cargo:',iStyB);
+        for(let c=5;c<13;c++) scv(ws,row,c,c===5?inf.cargo:'',iSty);
+        merge(row,5,12);ws['!rows'][row]={hpt:17};row++;
+        // Cabeçalho das colunas
+        const cabSty=sty(C.CAB_DIAS,'FF000000',true,'center');
+        ['DATA','DIA','PONTO 1','PONTO 2','PONTO 3','PONTO 4','PONTO 5','PONTO 6','PONTO 7','PONTO 8','TOTAL TRABALHADO','EXPEDIENTE','SALDO']
+          .forEach((h,c)=>scv(ws,row,c,h,cabSty));
+        ws['!rows'][row]={hpt:18};
+        const rowIniDados=row+1; // linha Excel = row+1 (1-indexed)
+        row++;
+
+        // ── Linhas de dados (um dia por linha) ──────────────────────
+        let alt=0,rowFimDados=row;
+        for(const data of sortDatas(Object.keys(bat[pis]||{}))){
+          const bts=sortBats(bat[pis][data]);
+          const temMeia=bts.some(b=>b.startsWith('00:'));
+          const ds=diaSem(data);
+          let fillCor;
+          if(temMeia)      fillCor=C.ATENCAO;
+          else if(ds==='DOM') fillCor=C.DOMINGO;
+          else if(ds==='SAB') fillCor=C.SABADO;
+          else               fillCor=alt%2===0?C.ZEBRA:C.BRANCO;
+          const lSty=sty(fillCor,'FF000000',false,'center');
+
+          // Converter batidas para frações de dia (valor numérico Excel)
+          // Batidas 00:xx (meia-noite real) recebem +1 para exibir como 24:xx
+          const bFrac=bts.map(h=>{
+            if(!h)return null;
+            const p=h.split(':');const hh=+p[0],mm=+p[1]||0;
+            const frac=(hh*60+mm)/1440;
+            return hh===0?frac+1:frac; // +1 = passa para o dia seguinte → Excel exibe [h]:mm como 24:xx
+          });
+
+          // Coluna A — Data
+          scv(ws,row,0,data,lSty);
+          // Coluna B — Dia semana
+          scv(ws,row,1,ds,lSty);
+          // Colunas C..J — Ponto 1..8 com valor numérico (fração do dia)
+          for(let b=0;b<8;b++){
+            const frac=b<bFrac.length?bFrac[b]:null;
+            if(frac!==null&&frac!==undefined){
+              // Formato: batidas normais = hh:mm; batidas noturnas (frac>1) = [h]:mm
+              const fmt=frac>=1?'[h]:mm':'hh:mm';
+              scv(ws,row,2+b,frac,{...lSty},fmt);
+            }else{
+              scv(ws,row,2+b,'',lSty);
+            }
+          }
+
+          // ── Coluna K — TOTAL TRABALHADO (fórmula Excel) ──────────
+          // Fórmula: (D-C)+(F-E)+(H-G)+(J-I) com proteção ISNUMBER
+          const R=row+1; // linha Excel (1-based)
+          const fK=`=IF(AND(ISNUMBER(C${R}),ISNUMBER(D${R})),D${R}-C${R},0)`+
+                   `+IF(AND(ISNUMBER(E${R}),ISNUMBER(F${R})),F${R}-E${R},0)`+
+                   `+IF(AND(ISNUMBER(G${R}),ISNUMBER(H${R})),H${R}-G${R},0)`+
+                   `+IF(AND(ISNUMBER(I${R}),ISNUMBER(J${R})),J${R}-I${R},0)`;
+          scf(ws,row,10,fK,sty(C.TOTAL_H,'FF000000',true,'center'),'[h]:mm');
+
+          // ── Coluna L — EXPEDIENTE (vazio — usuário preenche) ─────
+          scv(ws,row,11,'',{fill:{fgColor:{rgb:C.EXPEDI}},border:brd(),alignment:{horizontal:'center'}},'[h]:mm');
+
+          // ── Coluna M — SALDO (fórmula Excel) ─────────────────────
+          // =SE(L vazio;"";SE(K-L>=0;TEXT(K-L;"hh:mm");"NEGAT. -"&TEXT(ABS(K-L);"hh:mm")))
+          const fM=`=IF(OR(L${R}="",L${R}=0),"",`+
+                   `IF(K${R}-L${R}>=0,`+
+                   `TEXT(K${R}-L${R},"hh:mm"),`+
+                   `"NEGAT. -"&TEXT(ABS(K${R}-L${R}),"hh:mm")))`;
+          scf(ws,row,12,fM,{...lSty,alignment:{horizontal:'center'}},'@');
+
+          ws['!rows'][row]={hpt:17};
+          rowFimDados=row;
+          row++;alt++;
+        }
+
+        // ── Linha TOTAL DO PERÍODO ─────────────────────────────────
+        const R1=rowIniDados+1; // linha Excel primeira linha dados
+        const R2=rowFimDados+1; // linha Excel última linha dados
+        const Rcur=row+1;       // linha Excel da linha total
+
+        scv(ws,row,0,`TOTAL DO PERIODO - ${inf.nome}`,
+          sty(C.FUNC_NOME,'FFFFFFFF',true,'center'));
+        merge(row,0,9);
+
+        // K total = SUM das K dos dias com formato [h]:mm
+        scf(ws,row,10,`=SUM(K${R1}:K${R2})`,
+          sty(C.TOTAL_PER,'FFFFFFFF',true,'center'),'[h]:mm');
+
+        // L total = SUM das L (expediente total preenchido pelo usuário)
+        scf(ws,row,11,`=SUM(L${R1}:L${R2})`,
+          {fill:{fgColor:{rgb:C.FUNC_NOME}},font:{color:{rgb:'FFFFFFFF'},bold:true,sz:10},alignment:{horizontal:'center',vertical:'center'},border:brd()},'[h]:mm');
+
+        // M total = saldo acumulado do período
+        const fMtot=`=IF(K${Rcur}=0,"",`+
+                    `IF(K${Rcur}-L${Rcur}>=0,`+
+                    `TEXT(K${Rcur}-L${Rcur},"[h]:mm"),`+
+                    `"NEGAT. -"&TEXT(ABS(K${Rcur}-L${Rcur}),"[h]:mm")))`;
+        scf(ws,row,12,fMtot,
+          {fill:{fgColor:{rgb:C.SALDO_BG}},font:{bold:true,sz:10},alignment:{horizontal:'center',vertical:'center'},border:brd()},'@');
+
+        ws['!rows'][row]={hpt:22};
+        row+=2; // pula uma linha entre funcionários
+      }
+
+      // ── Configurações da aba ──────────────────────────────────────
+      ws['!cols']=[{wch:13},{wch:6},{wch:9},{wch:9},{wch:9},{wch:9},{wch:9},{wch:9},{wch:9},{wch:9},{wch:16},{wch:13},{wch:13}];
+      ws['!merges']=merges;
+      ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:row-1,c:12}});
+      ws['!freeze']={xSplit:0,ySplit:4,topLeftCell:'A5',activePane:'bottomLeft',state:'frozen'};
+      XLSX.utils.book_append_sheet(wb,ws,`Espelho T${t}`);
+    }
+    const ts=new Date().toISOString().replace(/[:.]/g,'-').substring(0,16);
+    XLSX.writeFile(wb,`EspelhoPonto_T${turnos.join('')}_${ts}.xlsx`,{cellStyles:true});
+    toast(`✅ Espelho T${turnos.join('+')} gerado e baixado!`,'s');
+  }catch(e){toast('Erro: '+e.message,'e');console.error(e)}
+  btn.disabled=false;btn.innerHTML='🪞 Gerar e Baixar XLSX';
+}
+
+// ══════════════════════════════════════════════════════════
+//  EXPORTAR CADASTRO XLSX
+// ══════════════════════════════════════════════════════════
+async function exportCad(){
+  const all=await idbGetAll('cadastro');
+  const wb=XLSX.utils.book_new();
+  const abas=[['Cadastro',null],['CadastroTurno(1)',1],['CadastroTurno(2)',2],['CadastroTurno(3)',3]];
+  for(const[nome,t]of abas){
+    const rows=t==null?all:all.filter(f=>f.turno===t);
+    rows.sort((a,b)=>a.nome.localeCompare(b.nome));
+    const aoa=[['PIS','Matricula','Nome','Cargo','Turno','Cadastrado em'],...rows.map(r=>[r.pis,r.matricula,r.nome,r.cargo,r.turno,r.criado_em?.substring(0,10)||''])];
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:14},{wch:12},{wch:36},{wch:22},{wch:8},{wch:14}];
+    ws['!autofilter']={ref:`A1:F${rows.length+1}`};
+    XLSX.utils.book_append_sheet(wb,ws,nome);
+  }
+  XLSX.writeFile(wb,`Cadastro_${new Date().toISOString().substring(0,10)}.xlsx`);
+  toast('✅ Cadastro exportado!','s');
+}
+
+// ══════════════════════════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════════════════════════
+async function logRender(){
+  const logs=await idbGetAll('log');
+  const tbody=document.getElementById('log-body');
+  const empty=document.getElementById('log-empty');
+  if(!logs.length){tbody.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  tbody.innerHTML=[...logs].reverse().map(l=>`
+    <tr>
+      <td class="mono" style="font-size:10px;white-space:nowrap">${l.ts}</td>
+      <td><span style="color:var(--or);font-size:11px">${l.modulo}</span></td>
+      <td class="mono">${l.linha_txt||'—'}</td>
+      <td style="color:var(--tx3);font-size:11px;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.descricao}">${l.descricao}</td>
+    </tr>`).join('');
+}
+async function logLimpar(){await idbClear('log');logRender();refreshStatus();toast('Log limpo','i')}
+
+// ══════════════════════════════════════════════════════════
+//  MODAL / TOAST
+// ══════════════════════════════════════════════════════════
+function openMo(id){document.getElementById(id).classList.add('open')}
+function closeMo(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mo.open').forEach(m=>m.classList.remove('open'))});
+function toast(msg,type='i',dur=3500){
+  const ic={s:'✅',e:'❌',i:'ℹ️',w:'⚠️'};
+  const el=document.createElement('div');
+  el.className=`ti ${type}`;
+  el.innerHTML=`<span>${ic[type]}</span><span>${msg}</span>`;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>{el.style.animation='fOut .3s forwards';setTimeout(()=>el.remove(),300)},dur);
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+(async()=>{
+  await initDB();
+  await seedIfEmpty();
+  await refreshStatus();
+  await loadDash();
+})();
+</script>
+</body>
+</html>
