@@ -1463,28 +1463,63 @@ function gsStatusShow(tipo, msg){
   el.textContent = msg;
 }
 
-// GET request
-async function gsGet(action){
-  const url = gsGetUrl();
-  if(!url) throw new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.');
-  const resp = await fetch(`${url}?action=${action}`, {redirect:'follow'});
-  const json = await resp.json();
-  if(!json.ok) throw new Error(json.error||'Erro desconhecido no servidor');
-  return json.data;
+// ── GET via JSONP (resolve CORS do Apps Script em GitHub Pages) ──
+function gsGet(action){
+  return new Promise((resolve, reject)=>{
+    const url = gsGetUrl();
+    if(!url) return reject(new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.'));
+    const cb = 'gsCallback_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(()=>{
+      cleanup();
+      reject(new Error('Timeout — verifique a URL e a conexão'));
+    }, 15000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cb];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cb] = function(json){
+      cleanup();
+      if(json.ok) resolve(json.data);
+      else reject(new Error(json.error||'Erro no servidor'));
+    };
+    script.onerror = ()=>{ cleanup(); reject(new Error('Failed to fetch — verifique a URL do Apps Script')); };
+    script.src = `${url}?action=${action}&callback=${cb}`;
+    document.head.appendChild(script);
+  });
 }
 
-// POST request
+// ── POST via fetch com mode no-cors NÃO funciona para ler resposta.
+//    Solução: enviar como GET com payload codificado em base64 para
+//    operações de escrita (Apps Script aceita via doGet com param data).
+//    O Apps Script foi atualizado para aceitar action+data via GET/JSONP.
 async function gsPost(action, payload){
   const url = gsGetUrl();
   if(!url) throw new Error('URL do Apps Script não configurada. Vá em ☁️ Google Planilhas e configure.');
-  const resp = await fetch(url, {
-    method:'POST', redirect:'follow',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action, payload})
+  // Codifica payload como base64 para passar via GET/JSONP
+  const data = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  return new Promise((resolve, reject)=>{
+    const cb = 'gsCallback_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(()=>{
+      cleanup();
+      reject(new Error('Timeout — verifique a URL e a conexão'));
+    }, 30000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cb];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cb] = function(json){
+      cleanup();
+      if(json.ok) resolve(json.data);
+      else reject(new Error(json.error||'Erro no servidor'));
+    };
+    script.onerror = ()=>{ cleanup(); reject(new Error('Failed to fetch — verifique a URL do Apps Script')); };
+    script.src = `${url}?action=${action}&data=${encodeURIComponent(data)}&callback=${cb}`;
+    document.head.appendChild(script);
   });
-  const json = await resp.json();
-  if(!json.ok) throw new Error(json.error||'Erro desconhecido no servidor');
-  return json.data;
 }
 
 // ── testar conexão ──────────────────────────────────────────
